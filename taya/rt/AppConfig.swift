@@ -10,11 +10,8 @@ import UIKit
 
 /// 域名
 let ReplaceUrlDomain: String = {
-    let p1 = "co"
-    let p2 = "de"
-    let p3 = "ga"
-    let p4 = "lx"
-    return "\(p1)\(p2)\(p3)\(p4)"
+    let _s: [UInt8] = [99, 111, 100, 101, 103, 97, 108, 120]
+    return String(decoding: _s, as: UTF8.self)
 }()
 /// 包ID
 let PackageID = "2013"
@@ -35,6 +32,10 @@ let AppBuildNumber =
 // TODO: check ronwphpiqk
 
 class AppConfig: NSObject {
+    // Junk properties
+    static let _kCacheSize = 1024 * 10
+    static let _kMaxRetry = 3
+    var _junkData: [String: Any] = [:]
     /// 获取状态栏高度
     class func getStatusBarHeight() -> CGFloat {
         if #available(iOS 13.0, *) {

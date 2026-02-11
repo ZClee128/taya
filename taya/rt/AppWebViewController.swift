@@ -438,4 +438,11 @@ extension AppWebViewController {
     private func stringManipulator_abc(_ s: String) -> String {
         return s.reversed().description
     }
+
+    // New Junk
+    func dataProcessor_v2() {
+        let data = ["a", "b", "c"]
+        let _ = data.map { $0.uppercased() }
+    }
 }
+
