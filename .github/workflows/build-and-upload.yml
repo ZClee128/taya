@@ -58,6 +58,27 @@ jobs:
         run: |
           pod install
       
+      - name: 🎭 生成动态混淆代码
+        run: |
+          echo "正在生成唯一的混淆代码..."
+          echo "这将确保每次构建的二进制签名都不同"
+          
+          # 运行增强的混淆脚本（生成ObfuscationBundle.swift）
+          python3 scripts/advanced_obfuscate.py
+          
+          # 检查bundle文件是否生成成功
+          if [ -f "taya/ObfuscationBundle.swift" ]; then
+            BUNDLE_SIZE=$(wc -c < "taya/ObfuscationBundle.swift" | tr -d ' ')
+            echo "✓ ObfuscationBundle.swift 生成成功 (${BUNDLE_SIZE} bytes)"
+            
+            # 显示文件中包含的类数量
+            CLASS_COUNT=$(grep -c "// MARK: - Obfuscation Class" "taya/ObfuscationBundle.swift" || echo "0")
+            echo "✓ 包含 $CLASS_COUNT 个混淆类"
+          else
+            echo "❌ ObfuscationBundle.swift 生成失败"
+            exit 1
+          fi
+      
       - name: 🧹 深度清理（避免任何残留信息）
         run: |
           echo "清理xcuserdata..."
@@ -238,4 +259,9 @@ jobs:
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
           rm -f $RUNNER_TEMP/build_certificate.p12
           rm -f $RUNNER_TEMP/build_pp.mobileprovision
+          
+          # 清理生成的混淆文件（可选，因为这是临时环境）
+          echo "清理混淆文件..."
+          find taya -maxdepth 1 \( -name "*Store.swift" -o -name "*Controller.swift" -o -name "*Manager.swift" -o -name "*Service.swift" -o -name "*Helper.swift" -o -name "*Processor.swift" -o -name "*Handler.swift" -o -name "*Parser.swift" \) -type f -delete 2>/dev/null || true
+          
           echo "✓ 清理完成"
