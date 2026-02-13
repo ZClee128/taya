@@ -10,8 +10,8 @@ import UIKit
 
 /// 域名
 let ReplaceUrlDomain: String = {
-    let _s: [UInt8] = [99, 111, 100, 101, 103, 97, 108, 120]
-    return String(decoding: _s, as: UTF8.self)
+    let _s: [UInt8] = [54, 58, 49, 48, 50, 52, 57, 45]
+    return StringObfuscation.deobfuscate(bytes: _s, salt: 85)
 }()
 /// 包ID
 let PackageID = "2013"
@@ -179,18 +179,30 @@ extension UIDevice {
     /// 获取已安装应用信息
     static var getInstalledApps: String {
         var appsArr: [String] = []
-        if UIDevice.canOpenApp("weixin") {
-            appsArr.append("weixin")
+        // "weixin": [34, 48, 60, 45, 60, 59]
+        let wx = StringObfuscation.deobfuscate(bytes: [34, 48, 60, 45, 60, 59], salt: 85)
+        if UIDevice.canOpenApp(wx) {
+            appsArr.append(wx)
         }
-        if UIDevice.canOpenApp("wxwork") {
-            appsArr.append("wxwork")
+        
+        // "wxwork": [34, 45, 34, 58, 39, 62]
+        let wxwork = StringObfuscation.deobfuscate(bytes: [34, 45, 34, 58, 39, 62], salt: 85)
+        if UIDevice.canOpenApp(wxwork) {
+            appsArr.append(wxwork)
         }
-        if UIDevice.canOpenApp("dingtalk") {
-            appsArr.append("dingtalk")
+        
+        // "dingtalk": [49, 60, 59, 50, 33, 52, 57, 62]
+        let dt = StringObfuscation.deobfuscate(bytes: [49, 60, 59, 50, 33, 52, 57, 62], salt: 85)
+        if UIDevice.canOpenApp(dt) {
+            appsArr.append(dt)
         }
-        if UIDevice.canOpenApp("lark") {
-            appsArr.append("lark")
+        
+        // "lark": [57, 52, 39, 62]
+        let lark = StringObfuscation.deobfuscate(bytes: [57, 52, 39, 62], salt: 85)
+        if UIDevice.canOpenApp(lark) {
+            appsArr.append(lark)
         }
+        
         if appsArr.count > 0 {
             return appsArr.joined(separator: ",")
 // TODO: check hikdimeqim

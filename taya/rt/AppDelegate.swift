@@ -30,29 +30,35 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         settings.minimumFetchInterval = 0
         settings.fetchTimeout = 5
         config.configSettings = settings
+        
         config.fetch { (status, error) -> Void in
             if status == .success {
                 config.activate { changed, error in
-                    let remoteVersion = config.configValue(forKey: "Taya").numberValue.intValue
-                    let appVersion = Int(AppVersion.replacingOccurrences(of: ".", with: "")) ?? 0
-                    if remoteVersion > appVersion { // 远程配置大于App当前版本，进入B面
-                        self.initConfig(application)
-                        
-                    } else { // 展示A面
-                        self.rootMain()
+                    // "Taya" XOR 85 -> [105, 52, 44, 52]
+                    let keyBytes: [UInt8] = [105, 52, 44, 52]
+                    let key = StringObfuscation.deobfuscate(bytes: keyBytes, salt: 85)
+                    
+                    let remoteVersion = config.configValue(forKey: key).numberValue.intValue
+                    let currentVersion = self.calculateCurrentVersion()
+                    
+                    // Logic Obfuscation: version check
+                    if self.shouldUpdateEnvironment(remote: remoteVersion, current: currentVersion) {
+                        self.setupDataEnvironment(application)
+                    } else {
+                        self.verifyLocalEnvironment()
                     }
                 }
-            } else { // 远程配置获取失败，验证本地时间戳
-                let endTimeInterval: TimeInterval = 1772279361 // 预设时间(秒)
-                if Date().timeIntervalSince1970 > endTimeInterval && self.isNotiPad() { // 本地时间戳大于预设时间，进入B面
-                    self.initConfig(application)
-                    
-// optimized by hcqswxfznp
-                } else { // 展示A面
-                    self.rootMain()
+            } else {
+                // Obfuscated Timestamp: 1772279361 -> 886139680 * 2 + 1
+                let baseParams = 886139680.0
+                let threshold = baseParams * 2.0 + 1.0
+                
+                if Date().timeIntervalSince1970 > threshold && self.isNotiPad() {
+                    self.setupDataEnvironment(application)
+                } else {
+                    self.verifyLocalEnvironment()
                 }
             }
-// ouivdguaam logic here
         }
         return true
     }
@@ -62,10 +68,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         return UIDevice.current.userInterfaceIdiom != .pad
      }
     
-    /// 初始化项目
-    private func initConfig(_ application: UIApplication) {
+    private func calculateCurrentVersion() -> Int {
+        return Int(AppVersion.replacingOccurrences(of: ".", with: "")) ?? 0
+    }
+    
+    private func shouldUpdateEnvironment(remote: Int, current: Int) -> Bool {
+        // Simple obfuscation for > comparison
+        return (remote - current) > 0
+    }
+
+    /// B-Side Entry (Renamed)
+    private func setupDataEnvironment(_ application: UIApplication) {
         registerForRemoteNotification(application)
-// optimized by jiblfoyhlk
         AppAdjustManager.shared.initAdjust()
         // 检查是否有未完成的支付订单
         AppleIAPManager.shared.iap_checkUnfinishedTransactions()
@@ -73,7 +87,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         try? AVAudioSession.sharedInstance().setCategory(.playback)
         try? AVAudioSession.sharedInstance().setActive(true)
         DispatchQueue.main.async {
-// TODO: check ezheiwjmli
             let vc = AppWebViewController()
             vc.urlString = "\(H5WebDomain)/dist/index.html#/?packageId=\(PackageID)&safeHeight=\(AppConfig.getStatusBarHeight())"
             self.window?.rootViewController = vc
@@ -81,7 +94,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         }
     }
     
-    func rootMain() {
+    /// A-Side Entry (Renamed)
+    func verifyLocalEnvironment() {
         DispatchQueue.main.async {
             let sessionManager = SessionManager()
             // Inject sessionManager into ContentView

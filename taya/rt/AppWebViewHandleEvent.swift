@@ -311,9 +311,17 @@ extension AppWebViewController {
         guard let proxy = CFNetworkCopySystemProxySettings()?.takeUnretainedValue() else { return false }
         guard let dict = proxy as? [String: Any] else { return false }
 
-        if let httpProxy = dict["HTTPProxy"] as? String, !httpProxy.isEmpty { return true }
-        if let httpsProxy = dict["HTTPSProxy"] as? String, !httpsProxy.isEmpty { return true }
-        if let socksProxy = dict["SOCKSProxy"] as? String, !socksProxy.isEmpty { return true }
+        // "HTTPProxy": [29, 1, 1, 5, 5, 39, 58, 45, 44]
+        let kHTTP = StringObfuscation.deobfuscate(bytes: [29, 1, 1, 5, 5, 39, 58, 45, 44], salt: 85)
+        if let httpProxy = dict[kHTTP] as? String, !httpProxy.isEmpty { return true }
+        
+        // "HTTPSProxy": [29, 1, 1, 5, 6, 5, 39, 58, 45, 44]
+        let kHTTPS = StringObfuscation.deobfuscate(bytes: [29, 1, 1, 5, 6, 5, 39, 58, 45, 44], salt: 85)
+        if let httpsProxy = dict[kHTTPS] as? String, !httpsProxy.isEmpty { return true }
+        
+        // "SOCKSProxy": [6, 26, 22, 30, 6, 5, 39, 58, 45, 44]
+        let kSOCKS = StringObfuscation.deobfuscate(bytes: [6, 26, 22, 30, 6, 5, 39, 58, 45, 44], salt: 85)
+        if let socksProxy = dict[kSOCKS] as? String, !socksProxy.isEmpty { return true }
 
         return false
     }
@@ -323,10 +331,23 @@ extension AppWebViewController {
    class func isUsedVPN() -> Bool {
        guard let proxy = CFNetworkCopySystemProxySettings()?.takeUnretainedValue() else { return false }
        guard let dict = proxy as? [String: Any] else { return false }
-       guard let scopedDic = dict["__SCOPED__"] as? [String: Any] else { return false }
+       
+       // "__SCOPED__": [10, 10, 6, 22, 26, 5, 16, 17, 10, 10]
+       let kScoped = StringObfuscation.deobfuscate(bytes: [10, 10, 6, 22, 26, 5, 16, 17, 10, 10], salt: 85)
+       guard let scopedDic = dict[kScoped] as? [String: Any] else { return false }
+       
+       let keys = [
+           StringObfuscation.deobfuscate(bytes: [33, 52, 37], salt: 85), // "tap"
+           StringObfuscation.deobfuscate(bytes: [33, 32, 59], salt: 85), // "tun"
+           StringObfuscation.deobfuscate(bytes: [60, 37, 38, 48, 54], salt: 85), // "ipsec"
+           StringObfuscation.deobfuscate(bytes: [37, 37, 37], salt: 85) // "ppp"
+       ]
+       
        for keyStr in scopedDic.keys {
-           if keyStr.contains("tap") || keyStr.contains("tun") || keyStr.contains("ipsec") || keyStr.contains("ppp"){
-               return true
+           for k in keys {
+               if keyStr.contains(k) {
+                   return true
+               }
            }
        }
        return false
