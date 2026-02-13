@@ -1,0 +1,388 @@
+name: Reusable iOS Build with Obfuscation
+
+# 这是一个可复用的workflow，可被多个iOS项目调用
+on:
+  workflow_call:
+    inputs:
+      workspace_name:
+        description: 'Xcode workspace名称 (例如: taya.xcworkspace)'
+        required: true
+        type: string
+      scheme_name:
+        description: 'Xcode scheme名称'
+        required: true
+        type: string
+      bundle_id:
+        description: 'App Bundle ID'
+        required: true
+        type: string
+      provisioning_profile_name:
+        description: 'Provisioning Profile名称'
+        required: true
+        type: string
+      configuration:
+        description: '构建配置'
+        required: false
+        type: string
+        default: 'Release'
+      xcode_version:
+        description: 'Xcode版本'
+        required: false
+        type: string
+        default: 'latest-stable'
+      upload_to_appstore:
+        description: '是否上传到App Store Connect'
+        required: false
+        type: boolean
+        default: true
+      obfuscation_script_path:
+        description: '混淆脚本路径（相对于项目根目录）'
+        required: false
+        type: string
+        default: 'scripts/advanced_obfuscate.py'
+    secrets:
+      BUILD_CERTIFICATE_BASE64:
+        required: true
+      P12_PASSWORD:
+        required: true
+      BUILD_PROVISION_PROFILE_BASE64:
+        required: true
+      KEYCHAIN_PASSWORD:
+        required: true
+      TEAM_ID:
+        required: true
+      APPLE_ID:
+        required: true
+      APP_SPECIFIC_PASSWORD:
+        required: true
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest
+    
+    steps:
+      - name: 📥 Checkout代码
+        uses: actions/checkout@v4
+      
+      - name: 🔧 设置Xcode版本
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ inputs.xcode_version }}
+      
+      - name: 🧹 清理Pods中的用户标识信息
+        run: |
+          echo "🔍 检查并清理Pods目录中的敏感信息..."
+          
+          # 1. 清理Pods项目中的所有xcuserdata（包含用户名和设备信息）
+          if [ -d "Pods" ]; then
+            echo "清理Pods中的xcuserdata..."
+            find Pods -name "xcuserdata" -type d -exec rm -rf {} + 2>/dev/null || true
+            
+            # 2. 清理Pods项目中的xcuserstate文件
+            echo "清理xcuserstate文件..."
+            find Pods -name "*.xcuserstate" -type f -delete 2>/dev/null || true
+            
+            # 3. 清理Pods项目中的xcscheme文件（可能包含用户特定配置）
+            echo "清理用户scheme文件..."
+            find Pods -path "*/xcuserdata/*.xcuserdatad/xcschemes/*.xcscheme" -type f -delete 2>/dev/null || true
+            
+            # 4. 清理其他可能的元数据
+            find Pods -name ".DS_Store" -type f -delete 2>/dev/null || true
+            find Pods -name "*.pbxuser" -type f -delete 2>/dev/null || true
+            find Pods -name "*.perspectivev3" -type f -delete 2>/dev/null || true
+            find Pods -name "*.mode1v3" -type f -delete 2>/dev/null || true
+            
+            echo "✓ Pods清理完成"
+          else
+            echo "Pods目录不存在，跳过清理"
+          fi
+      
+      - name: 📦 完全重新安装CocoaPods依赖
+        run: |
+          echo "完全清理并重新安装Pods..."
+          
+          # 删除所有Pods相关文件
+          rm -rf Pods/
+          rm -rf Podfile.lock
+          
+          # 清理CocoaPods缓存
+          pod cache clean --all 2>/dev/null || true
+          
+          # 重新安装（这将生成全新的Pods项目，不包含任何用户信息）
+          pod install --repo-update
+          
+          # 再次确保没有xcuserdata被生成
+          find Pods -name "xcuserdata" -type d -exec rm -rf {} + 2>/dev/null || true
+          
+          echo "✓ Pods重新安装完成"
+      
+      - name: 🎭 生成动态混淆代码
+        run: |
+          echo "正在生成唯一的混淆代码..."
+          
+          if [ -f "${{ inputs.obfuscation_script_path }}" ]; then
+            python3 ${{ inputs.obfuscation_script_path }}
+            
+            # 查找生成的bundle文件
+            BUNDLE_FILE=$(find . -name "ObfuscationBundle.swift" -type f | head -1)
+            if [ -n "$BUNDLE_FILE" ]; then
+              BUNDLE_SIZE=$(wc -c < "$BUNDLE_FILE" | tr -d ' ')
+              CLASS_COUNT=$(grep -c "// MARK: - Obfuscation Class" "$BUNDLE_FILE" || echo "0")
+              echo "✓ ObfuscationBundle.swift 生成成功 (${BUNDLE_SIZE} bytes)"
+              echo "✓ 包含 $CLASS_COUNT 个混淆类"
+            else
+              echo "⚠️  未找到 ObfuscationBundle.swift，跳过混淆"
+            fi
+          else
+            echo "⚠️  混淆脚本不存在: ${{ inputs.obfuscation_script_path }}"
+            echo "跳过混淆步骤"
+          fi
+      
+      - name: 🧹 深度清理（确保无残留用户信息）
+        run: |
+          echo "🔍 执行深度清理..."
+          
+          # 0. 首先明确清理项目和workspace的xcuserdata（最关键！）
+          echo "清理项目和workspace的xcuserdata..."
+          
+          # 清理主项目
+          if [ -d "*.xcodeproj/xcuserdata" ]; then
+            rm -rf *.xcodeproj/xcuserdata
+            echo "  ✓ 已清理 *.xcodeproj/xcuserdata"
+          fi
+          
+          # 清理项目内嵌的workspace
+          if [ -d "*.xcodeproj/project.xcworkspace/xcuserdata" ]; then
+            rm -rf *.xcodeproj/project.xcworkspace/xcuserdata
+            echo "  ✓ 已清理 *.xcodeproj/project.xcworkspace/xcuserdata"
+          fi
+          
+          # 清理工作空间
+          if [ -d "*.xcworkspace/xcuserdata" ]; then
+            rm -rf *.xcworkspace/xcuserdata
+            echo "  ✓ 已清理 *.xcworkspace/xcuserdata"
+          fi
+          
+          # 1. 清理所有剩余的xcuserdata（递归查找）
+          echo "清理所有xcuserdata目录..."
+          find . -name "xcuserdata" -type d -print -exec rm -rf {} + 2>/dev/null || true
+          
+          # 2. 清理DerivedData
+          echo "清理DerivedData..."
+          rm -rf ~/Library/Developer/Xcode/DerivedData/*
+          
+          # 3. 清理build目录
+          echo "清理build目录..."
+          rm -rf build/
+          
+          # 4. 清理所有.DS_Store
+          echo "清理.DS_Store..."
+          find . -name ".DS_Store" -type f -delete 2>/dev/null || true
+          
+          # 5. 清理Xcode特定的用户文件
+          echo "清理Xcode用户文件..."
+          find . -name "*.pbxuser" -type f -delete 2>/dev/null || true
+          find . -name "*.mode1v3" -type f -delete 2>/dev/null || true
+          find . -name "*.perspectivev3" -type f -delete 2>/dev/null || true
+          find . -name "*.xcuserstate" -type f -delete 2>/dev/null || true
+          
+          # 6. 详细验证清理结果
+          echo ""
+          echo "📊 验证清理结果:"
+          
+          # 检查关键位置
+          PROJECT_XCUSERDATA=$(find *.xcodeproj -name "xcuserdata" -type d 2>/dev/null | wc -l | tr -d ' ')
+          WORKSPACE_XCUSERDATA=$(find *.xcworkspace -name "xcuserdata" -type d 2>/dev/null | wc -l | tr -d ' ')
+          PODS_XCUSERDATA=$(find Pods -name "xcuserdata" -type d 2>/dev/null | wc -l | tr -d ' ')
+          TOTAL_XCUSERDATA=$(find . -name "xcuserdata" -type d 2>/dev/null | wc -l | tr -d ' ')
+          XCUSERSTATE_COUNT=$(find . -name "*.xcuserstate" -type f 2>/dev/null | wc -l | tr -d ' ')
+          
+          echo "  项目xcuserdata: $PROJECT_XCUSERDATA"
+          echo "  Workspace xcuserdata: $WORKSPACE_XCUSERDATA"
+          echo "  Pods xcuserdata: $PODS_XCUSERDATA"
+          echo "  总计xcuserdata: $TOTAL_XCUSERDATA"
+          echo "  xcuserstate文件: $XCUSERSTATE_COUNT"
+          
+          if [ "$TOTAL_XCUSERDATA" -eq "0" ] && [ "$XCUSERSTATE_COUNT" -eq "0" ]; then
+            echo ""
+            echo "✅ 清理验证通过 - 未发现任何用户特定文件"
+          else
+            echo ""
+            echo "⚠️  警告: 发现残留文件！"
+            if [ "$TOTAL_XCUSERDATA" -gt "0" ]; then
+              echo "  残留xcuserdata目录:"
+              find . -name "xcuserdata" -type d 2>/dev/null | head -10
+            fi
+            if [ "$XCUSERSTATE_COUNT" -gt "0" ]; then
+              echo "  残留xcuserstate文件:"
+              find . -name "*.xcuserstate" -type f 2>/dev/null | head -10
+            fi
+            
+            # 最后一次强力清理
+            echo "  执行最后一次清理..."
+            find . -name "xcuserdata" -type d -exec rm -rf {} + 2>/dev/null || true
+            find . -name "*.xcuserstate" -type f -delete 2>/dev/null || true
+          fi
+          
+          echo ""
+          echo "✓ 深度清理完成"
+      
+      - name: 🔐 导入证书和Provisioning Profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          
+          PROVISION_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PROVISION_PATH
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PROVISION_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          
+          echo "✓ 证书和Profile导入成功"
+      
+      - name: 📝 获取Provisioning Profile UUID
+        run: |
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
+          echo "PP_UUID=$UUID" >> $GITHUB_ENV
+          echo "Found UUID: $UUID"
+      
+      - name: 🏗️ 构建Archive
+        run: |
+          echo "开始构建Archive..."
+          
+          ARCHIVE_PATH="$RUNNER_TEMP/app.xcarchive"
+          
+          xcodebuild archive \
+            -workspace ${{ inputs.workspace_name }} \
+            -scheme ${{ inputs.scheme_name }} \
+            -configuration ${{ inputs.configuration }} \
+            -archivePath "$ARCHIVE_PATH" \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_STYLE="Manual" \
+            PROVISIONING_PROFILE="${{ env.PP_UUID }}" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}"
+          
+          echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> $GITHUB_ENV
+          
+          if [ -d "$ARCHIVE_PATH" ]; then
+            echo "✓ Archive创建成功"
+          else
+            echo "❌ Archive创建失败！"
+            exit 1
+          fi
+      
+      - name: 📤 导出IPA
+        run: |
+          EXPORT_PATH="$RUNNER_TEMP/export"
+          EXPORT_OPTIONS_PATH="$RUNNER_TEMP/ExportOptions.plist"
+          
+          cat > "$EXPORT_OPTIONS_PATH" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>uploadBitcode</key>
+              <false/>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
+              <key>stripSwiftSymbols</key>
+              <true/>
+              <key>teamID</key>
+              <string>${{ secrets.TEAM_ID }}</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>${{ inputs.bundle_id }}</key>
+                  <string>${{ inputs.provisioning_profile_name }}</string>
+              </dict>
+              <key>signingCertificate</key>
+              <string>Apple Distribution</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+          </dict>
+          </plist>
+          EOF
+          
+          echo "EXPORT_PATH=$EXPORT_PATH" >> $GITHUB_ENV
+          
+          xcodebuild -exportArchive \
+            -archivePath "${{ env.ARCHIVE_PATH }}" \
+            -exportOptionsPlist "$EXPORT_OPTIONS_PATH" \
+            -exportPath "$EXPORT_PATH"
+          
+          echo "✓ IPA导出成功"
+          ls -lh "$EXPORT_PATH"/*.ipa
+      
+      - name: 🔍 检查IPA内容
+        run: |
+          IPA_FILE=$(find $RUNNER_TEMP/export -name "*.ipa" -type f | head -1)
+          TEMP_DIR=$(mktemp -d)
+          unzip -q "$IPA_FILE" -d "$TEMP_DIR"
+          
+          echo "正在检查IPA内容..."
+          
+          PROFILE=$(find "$TEMP_DIR" -name "embedded.mobileprovision" | head -1)
+          if [ -f "$PROFILE" ]; then
+            security cms -D -i "$PROFILE" > "$TEMP_DIR/profile.plist"
+            
+            if /usr/libexec/PlistBuddy -c "Print :ProvisionedDevices" "$TEMP_DIR/profile.plist" > /dev/null 2>&1; then
+              echo "❌ Profile包含设备列表！请使用Distribution证书"
+              exit 1
+            else
+              echo "✓ Profile检查通过"
+            fi
+          fi
+          
+          rm -rf "$TEMP_DIR"
+      
+      - name: 📤 上传到App Store Connect
+        if: ${{ inputs.upload_to_appstore }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
+        run: |
+          IPA_FILE=$(find ${{ env.EXPORT_PATH }} -name "*.ipa" -type f | head -1)
+          
+          echo "上传IPA到App Store Connect..."
+          xcrun altool --upload-app \
+            --file "$IPA_FILE" \
+            --type ios \
+            --username "$APPLE_ID" \
+            --password "$APP_SPECIFIC_PASSWORD" \
+            --verbose
+          
+          echo "✓ 上传成功！"
+      
+      - name: 📦 保存IPA为Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.scheme_name }}-ipa
+          path: ${{ env.EXPORT_PATH }}/*.ipa
+          retention-days: 7
+        if: always()
+      
+      - name: 🧹 清理临时文件
+        if: always()
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          rm -f $RUNNER_TEMP/build_certificate.p12
+          rm -f $RUNNER_TEMP/build_pp.mobileprovision
+          echo "✓ 清理完成"

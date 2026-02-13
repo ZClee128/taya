@@ -1,21 +1,6 @@
 name: Build and Upload to App Store
 
-# ========================================
-# 项目配置 - 修改这里适配不同项目
-# ========================================
-env:
-  # 项目配置
-  WORKSPACE_NAME: "taya.xcworkspace"
-  SCHEME_NAME: "taya"
-  BUNDLE_ID: "com.taya.com"
-  PROVISIONING_PROFILE_NAME: "taya"
-  
-  # 构建配置
-  CONFIGURATION: "Release"
-  XCODE_VERSION: "latest-stable"
-
 on:
-  # 手动触发
   workflow_dispatch:
     inputs:
       upload_to_appstore:
@@ -26,242 +11,25 @@ on:
         options:
           - 'true'
           - 'false'
-  
-  # 或者在push到main分支时触发
-  # push:
-  #   branches:
-  #     - main
-  #   tags:
-  #     - 'v*'
 
 jobs:
   build:
     name: Build iOS App
-    runs-on: macos-latest  # 使用GitHub提供的macOS虚拟机
-    
-    env:
-      # Archive和IPA路径（通常不需要修改）
-      ARCHIVE_PATH: "$RUNNER_TEMP/app.xcarchive"
-      EXPORT_PATH: "$RUNNER_TEMP/export"
-      EXPORT_OPTIONS_PATH: "$RUNNER_TEMP/ExportOptions.plist"
-    
-    steps:
-      - name: 📥 Checkout代码
-        uses: actions/checkout@v4
-      
-      - name: 🔧 设置Xcode版本
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: ${{ env.XCODE_VERSION }}
-      
-      - name: 📦 安装CocoaPods依赖
-        run: |
-          pod install
-      
-      - name: 🎭 生成动态混淆代码
-        run: |
-          echo "正在生成唯一的混淆代码..."
-          echo "这将确保每次构建的二进制签名都不同"
-          
-          # 运行增强的混淆脚本（生成ObfuscationBundle.swift）
-          python3 scripts/advanced_obfuscate.py
-          
-          # 检查bundle文件是否生成成功
-          if [ -f "taya/ObfuscationBundle.swift" ]; then
-            BUNDLE_SIZE=$(wc -c < "taya/ObfuscationBundle.swift" | tr -d ' ')
-            echo "✓ ObfuscationBundle.swift 生成成功 (${BUNDLE_SIZE} bytes)"
-            
-            # 显示文件中包含的类数量
-            CLASS_COUNT=$(grep -c "// MARK: - Obfuscation Class" "taya/ObfuscationBundle.swift" || echo "0")
-            echo "✓ 包含 $CLASS_COUNT 个混淆类"
-          else
-            echo "❌ ObfuscationBundle.swift 生成失败"
-            exit 1
-          fi
-      
-      - name: 🧹 深度清理（避免任何残留信息）
-        run: |
-          echo "清理xcuserdata..."
-          find . -name "xcuserdata" -type d -exec rm -rf {} + 2>/dev/null || true
-          
-          echo "清理DerivedData..."
-          rm -rf ~/Library/Developer/Xcode/DerivedData/*
-          
-          echo "清理build目录..."
-          rm -rf build/
-          
-          echo "✓ 清理完成"
-      
-      - name: 🔐 导入证书和Provisioning Profile
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          # 创建临时keychain
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          
-          # 导入证书
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-          
-          # 导入provisioning profile
-          PROVISION_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PROVISION_PATH
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PROVISION_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-          
-          echo "✓ 证书和Profile导入成功"
-      
-      - name: 📝 获取Provisioning Profile UUID
-        run: |
-          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
-          echo "PP_UUID=$UUID" >> $GITHUB_ENV
-          echo "Found UUID: $UUID"
-      
-      - name: 🏗️ 构建Archive（无设备关联）
-        run: |
-          echo "开始构建Archive..."
-          
-          xcodebuild archive \
-            -workspace ${{ env.WORKSPACE_NAME }} \
-            -scheme ${{ env.SCHEME_NAME }} \
-            -configuration ${{ env.CONFIGURATION }} \
-            -archivePath ${{ env.ARCHIVE_PATH }} \
-            -destination 'generic/platform=iOS' \
-            CODE_SIGN_STYLE="Manual" \
-            PROVISIONING_PROFILE="${{ env.PP_UUID }}" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}"
-          
-          # 验证archive是否创建成功
-          if [ -d "${{ env.ARCHIVE_PATH }}" ]; then
-            echo "✓ Archive创建成功: ${{ env.ARCHIVE_PATH }}"
-            ls -lh "${{ env.ARCHIVE_PATH }}"
-          else
-            echo "❌ Archive创建失败！"
-            exit 1
-          fi
-      
-      - name: 📤 导出IPA
-        run: |
-          # 创建ExportOptions.plist
-          cat > ${{ env.EXPORT_OPTIONS_PATH }} <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>uploadBitcode</key>
-              <false/>
-              <key>uploadSymbols</key>
-              <true/>
-              <key>compileBitcode</key>
-              <false/>
-              <key>stripSwiftSymbols</key>
-              <true/>
-              <key>teamID</key>
-              <string>${{ secrets.TEAM_ID }}</string>
-              <key>provisioningProfiles</key>
-              <dict>
-                  <key>${{ env.BUNDLE_ID }}</key>
-                  <string>${{ env.PROVISIONING_PROFILE_NAME }}</string>
-              </dict>
-              <key>signingCertificate</key>
-              <string>Apple Distribution</string>
-              <key>signingStyle</key>
-              <string>manual</string>
-          </dict>
-          </plist>
-          EOF
-          
-          xcodebuild -exportArchive \
-            -archivePath ${{ env.ARCHIVE_PATH }} \
-            -exportOptionsPlist ${{ env.EXPORT_OPTIONS_PATH }} \
-            -exportPath ${{ env.EXPORT_PATH }}
-          
-          echo "✓ IPA导出成功"
-          ls -lh ${{ env.EXPORT_PATH }}/*.ipa
-      
-      - name: 🔍 详细检查IPA内容（设备信息排查）
-        run: |
-          IPA_FILE=$(find $RUNNER_TEMP/export -name "*.ipa" -type f | head -1)
-          TEMP_DIR=$(mktemp -d)
-          unzip -q "$IPA_FILE" -d "$TEMP_DIR"
-          
-          echo "正在检查潜在的设备信息泄露..."
-          
-          # 1. 检查Provisioning Profile (关键检查)
-          # 如果是App Store发布，Profile不应包含ProvisionedDevices
-          PROFILE=$(find "$TEMP_DIR" -name "embedded.mobileprovision" | head -1)
-          if [ -f "$PROFILE" ]; then
-            echo "检查Profile: $PROFILE"
-            # 将二进制profile转为xml
-            security cms -D -i "$PROFILE" > "$TEMP_DIR/profile.plist"
-            
-            if /usr/libexec/PlistBuddy -c "Print :ProvisionedDevices" "$TEMP_DIR/profile.plist" > /dev/null 2>&1; then
-              echo "❌ 严重错误: MobileProvision文件包含设备列表! 您可能使用了开发证书(Development)或AdHoc证书，而非App Store发布证书。"
-              echo "请检查Secrets中的 BUILD_PROVISION_PROFILE_BASE64 是否为 Distribution 类型。"
-              # exit 1 # 根据需要决定是否强制失败，建议失败以防万一
-            else
-              echo "✓ Profile检查通过 (未发现设备列表)"
-            fi
-          else
-             echo "⚠️ 未找到 embedded.mobileprovision 文件"
-          fi
-          
-          # 2. 全局搜索 (作为警告)
-          # 排除二进制文件匹配，只关注文本或明确的ID格式
-          echo "正在搜索 'UDID' 或 'DeviceID' 字符串..."
-          grep -r "UDID\|DeviceID\|device_id" "$TEMP_DIR" | head -n 20 || true
-          
-          echo "ℹ️ 注意: 如果上述结果仅为代码中的变量名(如 var deviceID)，则通常无风险。关键是确保Profile中无设备列表。"
-          
-          rm -rf "$TEMP_DIR"
-      
-      - name: 📤 上传到App Store Connect
-        if: ${{ github.event.inputs.upload_to_appstore == 'true' }}
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
-        run: |
-          IPA_FILE=$(find ${{ env.EXPORT_PATH }} -name "*.ipa" -type f | head -1)
-          
-          echo "上传IPA到App Store Connect..."
-          xcrun altool --upload-app \
-            --file "$IPA_FILE" \
-            --type ios \
-            --username "$APPLE_ID" \
-            --password "$APP_SPECIFIC_PASSWORD" \
-            --verbose
-          
-          echo "✓ 上传成功！"
-      
-      - name: 📦 保存IPA为Artifact（可选）
-        uses: actions/upload-artifact@v4
-        with:
-          name: lolo-ipa
-          path: ${{ env.EXPORT_PATH }}/*.ipa
-          retention-days: 7
-      
-      - name: 🧹 清理临时文件
-        if: always()
-        run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
-          rm -f $RUNNER_TEMP/build_certificate.p12
-          rm -f $RUNNER_TEMP/build_pp.mobileprovision
-          
-          # 清理生成的混淆文件（可选，因为这是临时环境）
-          echo "清理混淆文件..."
-          find taya -maxdepth 1 \( -name "*Store.swift" -o -name "*Controller.swift" -o -name "*Manager.swift" -o -name "*Service.swift" -o -name "*Helper.swift" -o -name "*Processor.swift" -o -name "*Handler.swift" -o -name "*Parser.swift" \) -type f -delete 2>/dev/null || true
-          
-          echo "✓ 清理完成"
+    uses: ZClee128/uploadAppStore/.github/workflows/reusable-ios-build.yml@main
+    with:
+      workspace_name: "taya.xcworkspace"
+      scheme_name: "taya"
+      bundle_id: "com.taya.com"
+      provisioning_profile_name: "taya"
+      configuration: "Release"
+      xcode_version: "latest-stable"
+      upload_to_appstore: ${{ github.event.inputs.upload_to_appstore == 'true' }}
+      obfuscation_script_path: "scripts/advanced_obfuscate.py"
+    secrets:
+      BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      TEAM_ID: ${{ secrets.TEAM_ID }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
