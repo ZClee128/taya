@@ -15,9 +15,9 @@ on:
 jobs:
   build:
     name: Build iOS App
-    uses: ZClee128/uploadAppStore/.github/workflows/reusable-ios-build.yml@main
+    uses: ./.github/workflows/reusable-ios-build.yml
     with:
-      workspace_name: "taya.xcworkspace"
+      project_name: "taya.xcodeproj"
       scheme_name: "taya"
       bundle_id: "com.taya.com"
       provisioning_profile_name: "taya"

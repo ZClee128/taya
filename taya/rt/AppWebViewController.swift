@@ -6,7 +6,7 @@
 //
 
 import UIKit
-import WebViewJavascriptBridge
+//import WebViewJavascriptBridge
 import WebKit
 
 class AppWebViewController: UIViewController {

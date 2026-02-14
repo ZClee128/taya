@@ -7,9 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1314FE46C6C1BB3EEAB759E2 /* Pods_taya.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F438D387D86A7AD9A893C27A /* Pods_taya.framework */; };
 		84C2A6E22F3E26F800EB2D03 /* ObfuscationBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */; };
 		84C2A6E52F3F488D00EB2D03 /* StringObfuscation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E32F3F488D00EB2D03 /* StringObfuscation.swift */; };
 		84C2A6E72F4010CF00EB2D03 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */; };
+		84CAA18A2F38CCD300CCCFC1 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84CAA1892F38CCD300CCCFC1 /* StoreKit.framework */; };
 		84CAA1B32F38D5F300CCCFC1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 84CAA19D2F38D5F300CCCFC1 /* Assets.xcassets */; };
 		84CAA1B42F38D5F300CCCFC1 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 84CAA1A12F38D5F300CCCFC1 /* GoogleService-Info.plist */; };
 		84CAA1B52F38D5F300CCCFC1 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 84CAA1A42F38D5F300CCCFC1 /* LaunchScreen.storyboard */; };
@@ -46,20 +48,11 @@
 		84CAA1E32F38D68700CCCFC1 /* AppRequestTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CAA1D22F38D68700CCCFC1 /* AppRequestTool.swift */; };
 		84CAA1E42F38D68700CCCFC1 /* AppWebViewScriptDelegateHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CAA1D52F38D68700CCCFC1 /* AppWebViewScriptDelegateHandler.swift */; };
 		84CAA1E52F38D68700CCCFC1 /* LocalPushScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CAA1D62F38D68700CCCFC1 /* LocalPushScheduler.swift */; };
-		84E8C7632F40CB25003B1E6D /* WKWebViewJavascriptBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 84E8C75F2F40CB25003B1E6D /* WKWebViewJavascriptBridge.m */; };
-		84E8C7642F40CB25003B1E6D /* WebViewJavascriptBridge_JS.m in Sources */ = {isa = PBXBuildFile; fileRef = 84E8C75B2F40CB25003B1E6D /* WebViewJavascriptBridge_JS.m */; };
-		84E8C7652F40CB25003B1E6D /* WebViewJavascriptBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 84E8C7592F40CB25003B1E6D /* WebViewJavascriptBridge.m */; };
-		84E8C7662F40CB25003B1E6D /* WebViewJavascriptBridgeBase.m in Sources */ = {isa = PBXBuildFile; fileRef = 84E8C75D2F40CB25003B1E6D /* WebViewJavascriptBridgeBase.m */; };
-		84E8C7692F40CC3D003B1E6D /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C7682F40CC3D003B1E6D /* Alamofire */; };
-		84E8C76E2F40CC5B003B1E6D /* HandyJSON in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C76D2F40CC5B003B1E6D /* HandyJSON */; };
-		84E8C7732F40CC91003B1E6D /* Adjust in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C7722F40CC91003B1E6D /* Adjust */; };
-		84E8C77F2F40CD6B003B1E6D /* KeychainSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C77E2F40CD6B003B1E6D /* KeychainSwift */; };
-		84E8C7882F40D4BD003B1E6D /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C7872F40D4BD003B1E6D /* FirebaseMessaging */; };
-		84E8C78A2F40D4BD003B1E6D /* FirebaseRemoteConfigSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C7892F40D4BD003B1E6D /* FirebaseRemoteConfigSwift */; };
-		84E8C78C2F40D4BD003B1E6D /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C78B2F40D4BD003B1E6D /* FirebaseRemoteConfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0D7858BE18CD0ED174A67B17 /* Pods-taya.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-taya.release.xcconfig"; path = "Target Support Files/Pods-taya/Pods-taya.release.xcconfig"; sourceTree = "<group>"; };
+		6D6CB38D5B0F198D85729641 /* Pods-taya.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-taya.debug.xcconfig"; path = "Target Support Files/Pods-taya/Pods-taya.debug.xcconfig"; sourceTree = "<group>"; };
 		84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObfuscationBundle.swift; sourceTree = "<group>"; };
 		84C2A6E32F3F488D00EB2D03 /* StringObfuscation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringObfuscation.swift; sourceTree = "<group>"; };
 		84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
@@ -102,15 +95,7 @@
 		84CAA1D62F38D68700CCCFC1 /* LocalPushScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPushScheduler.swift; sourceTree = "<group>"; };
 		84CAA1D72F38D68700CCCFC1 /* ProgressHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressHUD.swift; sourceTree = "<group>"; };
 		84CAA1D82F38D68700CCCFC1 /* WaitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaitViewController.swift; sourceTree = "<group>"; };
-		84E8C7582F40CB25003B1E6D /* WebViewJavascriptBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebViewJavascriptBridge.h; sourceTree = "<group>"; };
-		84E8C7592F40CB25003B1E6D /* WebViewJavascriptBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WebViewJavascriptBridge.m; sourceTree = "<group>"; };
-		84E8C75A2F40CB25003B1E6D /* WebViewJavascriptBridge_JS.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebViewJavascriptBridge_JS.h; sourceTree = "<group>"; };
-		84E8C75B2F40CB25003B1E6D /* WebViewJavascriptBridge_JS.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WebViewJavascriptBridge_JS.m; sourceTree = "<group>"; };
-		84E8C75C2F40CB25003B1E6D /* WebViewJavascriptBridgeBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebViewJavascriptBridgeBase.h; sourceTree = "<group>"; };
-		84E8C75D2F40CB25003B1E6D /* WebViewJavascriptBridgeBase.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WebViewJavascriptBridgeBase.m; sourceTree = "<group>"; };
-		84E8C75E2F40CB25003B1E6D /* WKWebViewJavascriptBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKWebViewJavascriptBridge.h; sourceTree = "<group>"; };
-		84E8C75F2F40CB25003B1E6D /* WKWebViewJavascriptBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WKWebViewJavascriptBridge.m; sourceTree = "<group>"; };
-		84E8C7802F40CDBE003B1E6D /* Taya-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Taya-Bridging-Header.h"; sourceTree = "<group>"; };
+		F438D387D86A7AD9A893C27A /* Pods_taya.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_taya.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,19 +103,23 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				84E8C7882F40D4BD003B1E6D /* FirebaseMessaging in Frameworks */,
-				84E8C7732F40CC91003B1E6D /* Adjust in Frameworks */,
-				84E8C78C2F40D4BD003B1E6D /* FirebaseRemoteConfig in Frameworks */,
-				84E8C7692F40CC3D003B1E6D /* Alamofire in Frameworks */,
-				84E8C77F2F40CD6B003B1E6D /* KeychainSwift in Frameworks */,
-				84E8C78A2F40D4BD003B1E6D /* FirebaseRemoteConfigSwift in Frameworks */,
-				84E8C76E2F40CC5B003B1E6D /* HandyJSON in Frameworks */,
+				84CAA18A2F38CCD300CCCFC1 /* StoreKit.framework in Frameworks */,
+				1314FE46C6C1BB3EEAB759E2 /* Pods_taya.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6193DC4A30E1F0D58DE36DF6 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				6D6CB38D5B0F198D85729641 /* Pods-taya.debug.xcconfig */,
+				0D7858BE18CD0ED174A67B17 /* Pods-taya.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		84C2A6E42F3F488D00EB2D03 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
@@ -145,6 +134,7 @@
 				84CAA1B22F38D5F300CCCFC1 /* taya */,
 				84CAA1882F38CCD300CCCFC1 /* Frameworks */,
 				84CAA1422F387A2E00CCCFC1 /* Products */,
+				6193DC4A30E1F0D58DE36DF6 /* Pods */,
 			);
 			sourceTree = "<group>";
 		};
@@ -160,6 +150,7 @@
 			isa = PBXGroup;
 			children = (
 				84CAA1892F38CCD300CCCFC1 /* StoreKit.framework */,
+				F438D387D86A7AD9A893C27A /* Pods_taya.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -167,9 +158,7 @@
 		84CAA1B22F38D5F300CCCFC1 /* taya */ = {
 			isa = PBXGroup;
 			children = (
-				84E8C7622F40CB25003B1E6D /* taya */,
 				84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */,
-				84E8C7802F40CDBE003B1E6D /* Taya-Bridging-Header.h */,
 				84C2A6E42F3F488D00EB2D03 /* Utils */,
 				84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */,
 				84CAA1CB2F38D66D00CCCFC1 /* rt */,
@@ -221,37 +210,6 @@
 			path = rt;
 			sourceTree = "<group>";
 		};
-		84E8C7602F40CB25003B1E6D /* Bridge */ = {
-			isa = PBXGroup;
-			children = (
-				84E8C7582F40CB25003B1E6D /* WebViewJavascriptBridge.h */,
-				84E8C7592F40CB25003B1E6D /* WebViewJavascriptBridge.m */,
-				84E8C75A2F40CB25003B1E6D /* WebViewJavascriptBridge_JS.h */,
-				84E8C75B2F40CB25003B1E6D /* WebViewJavascriptBridge_JS.m */,
-				84E8C75C2F40CB25003B1E6D /* WebViewJavascriptBridgeBase.h */,
-				84E8C75D2F40CB25003B1E6D /* WebViewJavascriptBridgeBase.m */,
-				84E8C75E2F40CB25003B1E6D /* WKWebViewJavascriptBridge.h */,
-				84E8C75F2F40CB25003B1E6D /* WKWebViewJavascriptBridge.m */,
-			);
-			path = Bridge;
-			sourceTree = "<group>";
-		};
-		84E8C7612F40CB25003B1E6D /* Utils */ = {
-			isa = PBXGroup;
-			children = (
-				84E8C7602F40CB25003B1E6D /* Bridge */,
-			);
-			path = Utils;
-			sourceTree = "<group>";
-		};
-		84E8C7622F40CB25003B1E6D /* taya */ = {
-			isa = PBXGroup;
-			children = (
-				84E8C7612F40CB25003B1E6D /* Utils */,
-			);
-			path = taya;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -259,9 +217,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 84CAA14C2F387A3000CCCFC1 /* Build configuration list for PBXNativeTarget "taya" */;
 			buildPhases = (
+				6335BDC6ED5F1C6FA243ABA4 /* [CP] Check Pods Manifest.lock */,
 				84CAA13D2F387A2E00CCCFC1 /* Sources */,
 				84CAA13E2F387A2E00CCCFC1 /* Frameworks */,
 				84CAA13F2F387A2E00CCCFC1 /* Resources */,
+				BA1D38F6F6F2FFAD46550D97 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -296,13 +256,6 @@
 				Base,
 			);
 			mainGroup = 84CAA1382F387A2E00CCCFC1;
-			packageReferences = (
-				84E8C7672F40CC3D003B1E6D /* XCRemoteSwiftPackageReference "Alamofire" */,
-				84E8C76C2F40CC5B003B1E6D /* XCRemoteSwiftPackageReference "HandyJSON" */,
-				84E8C76F2F40CC91003B1E6D /* XCRemoteSwiftPackageReference "ios_sdk" */,
-				84E8C77D2F40CD6B003B1E6D /* XCRemoteSwiftPackageReference "keychain-swift" */,
-				84E8C7862F40D4BD003B1E6D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
-			);
 			productRefGroup = 84CAA1422F387A2E00CCCFC1 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -328,6 +281,52 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		6335BDC6ED5F1C6FA243ABA4 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-taya-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		BA1D38F6F6F2FFAD46550D97 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-taya/Pods-taya-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-taya/Pods-taya-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-taya/Pods-taya-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		84CAA13D2F387A2E00CCCFC1 /* Sources */ = {
@@ -360,10 +359,6 @@
 				84CAA1C22F38D5F300CCCFC1 /* IMView.swift in Sources */,
 				84CAA1C32F38D5F300CCCFC1 /* Models.swift in Sources */,
 				84CAA1C42F38D5F300CCCFC1 /* PostDetailView.swift in Sources */,
-				84E8C7632F40CB25003B1E6D /* WKWebViewJavascriptBridge.m in Sources */,
-				84E8C7642F40CB25003B1E6D /* WebViewJavascriptBridge_JS.m in Sources */,
-				84E8C7652F40CB25003B1E6D /* WebViewJavascriptBridge.m in Sources */,
-				84E8C7662F40CB25003B1E6D /* WebViewJavascriptBridgeBase.m in Sources */,
 				84CAA1C52F38D5F300CCCFC1 /* ProfileView.swift in Sources */,
 				84CAA1C62F38D5F300CCCFC1 /* SessionManager.swift in Sources */,
 				84CAA1C72F38D5F300CCCFC1 /* StoreManager.swift in Sources */,
@@ -428,10 +423,6 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/taya/taya/Utils/Bridge",
-				);
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -439,7 +430,6 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_OBJC_BRIDGING_HEADER = "taya/Taya-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -490,10 +480,6 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/taya/taya/Utils/Bridge",
-				);
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -506,6 +492,7 @@
 		};
 		84CAA14D2F387A3000CCCFC1 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6D6CB38D5B0F198D85729641 /* Pods-taya.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -548,6 +535,7 @@
 		};
 		84CAA14E2F387A3000CCCFC1 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0D7858BE18CD0ED174A67B17 /* Pods-taya.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -558,10 +546,6 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/taya/taya/Utils/Bridge",
-				);
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Taya;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -586,7 +570,6 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "taya/Taya-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -615,87 +598,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		84E8C7672F40CC3D003B1E6D /* XCRemoteSwiftPackageReference "Alamofire" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Alamofire/Alamofire";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.11.1;
-			};
-		};
-		84E8C76C2F40CC5B003B1E6D /* XCRemoteSwiftPackageReference "HandyJSON" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/alibaba/HandyJSON";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.0.2;
-			};
-		};
-		84E8C76F2F40CC91003B1E6D /* XCRemoteSwiftPackageReference "ios_sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/adjust/ios_sdk";
-			requirement = {
-				kind = exactVersion;
-				version = 4.31.0;
-			};
-		};
-		84E8C77D2F40CD6B003B1E6D /* XCRemoteSwiftPackageReference "keychain-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/evgenyneu/keychain-swift.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 24.0.0;
-			};
-		};
-		84E8C7862F40D4BD003B1E6D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = exactVersion;
-				version = 10.24.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		84E8C7682F40CC3D003B1E6D /* Alamofire */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 84E8C7672F40CC3D003B1E6D /* XCRemoteSwiftPackageReference "Alamofire" */;
-			productName = Alamofire;
-		};
-		84E8C76D2F40CC5B003B1E6D /* HandyJSON */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 84E8C76C2F40CC5B003B1E6D /* XCRemoteSwiftPackageReference "HandyJSON" */;
-			productName = HandyJSON;
-		};
-		84E8C7722F40CC91003B1E6D /* Adjust */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 84E8C76F2F40CC91003B1E6D /* XCRemoteSwiftPackageReference "ios_sdk" */;
-			productName = Adjust;
-		};
-		84E8C77E2F40CD6B003B1E6D /* KeychainSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 84E8C77D2F40CD6B003B1E6D /* XCRemoteSwiftPackageReference "keychain-swift" */;
-			productName = KeychainSwift;
-		};
-		84E8C7872F40D4BD003B1E6D /* FirebaseMessaging */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 84E8C7862F40D4BD003B1E6D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseMessaging;
-		};
-		84E8C7892F40D4BD003B1E6D /* FirebaseRemoteConfigSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 84E8C7862F40D4BD003B1E6D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseRemoteConfigSwift;
-		};
-		84E8C78B2F40D4BD003B1E6D /* FirebaseRemoteConfig */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 84E8C7862F40D4BD003B1E6D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseRemoteConfig;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 84CAA1392F387A2E00CCCFC1 /* Project object */;
 }

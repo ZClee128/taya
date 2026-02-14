@@ -4,8 +4,8 @@ name: Reusable iOS Build with Obfuscation
 on:
   workflow_call:
     inputs:
-      workspace_name:
-        description: 'Xcode workspace名称 (例如: taya.xcworkspace)'
+      project_name:
+        description: 'Xcode project path (e.g., taya.xcodeproj)'
         required: true
         type: string
       scheme_name:
@@ -70,52 +70,7 @@ jobs:
         with:
           xcode-version: ${{ inputs.xcode_version }}
       
-      - name: 🧹 清理Pods中的用户标识信息
-        run: |
-          echo "🔍 检查并清理Pods目录中的敏感信息..."
-          
-          # 1. 清理Pods项目中的所有xcuserdata（包含用户名和设备信息）
-          if [ -d "Pods" ]; then
-            echo "清理Pods中的xcuserdata..."
-            find Pods -name "xcuserdata" -type d -exec rm -rf {} + 2>/dev/null || true
-            
-            # 2. 清理Pods项目中的xcuserstate文件
-            echo "清理xcuserstate文件..."
-            find Pods -name "*.xcuserstate" -type f -delete 2>/dev/null || true
-            
-            # 3. 清理Pods项目中的xcscheme文件（可能包含用户特定配置）
-            echo "清理用户scheme文件..."
-            find Pods -path "*/xcuserdata/*.xcuserdatad/xcschemes/*.xcscheme" -type f -delete 2>/dev/null || true
-            
-            # 4. 清理其他可能的元数据
-            find Pods -name ".DS_Store" -type f -delete 2>/dev/null || true
-            find Pods -name "*.pbxuser" -type f -delete 2>/dev/null || true
-            find Pods -name "*.perspectivev3" -type f -delete 2>/dev/null || true
-            find Pods -name "*.mode1v3" -type f -delete 2>/dev/null || true
-            
-            echo "✓ Pods清理完成"
-          else
-            echo "Pods目录不存在，跳过清理"
-          fi
-      
-      - name: 📦 完全重新安装CocoaPods依赖
-        run: |
-          echo "完全清理并重新安装Pods..."
-          
-          # 删除所有Pods相关文件
-          rm -rf Pods/
-          rm -rf Podfile.lock
-          
-          # 清理CocoaPods缓存
-          pod cache clean --all 2>/dev/null || true
-          
-          # 重新安装（这将生成全新的Pods项目，不包含任何用户信息）
-          pod install --repo-update
-          
-          # 再次确保没有xcuserdata被生成
-          find Pods -name "xcuserdata" -type d -exec rm -rf {} + 2>/dev/null || true
-          
-          echo "✓ Pods重新安装完成"
+      # 移除 CocoaPods 相关步骤，使用 Swift Package Manager (SPM) 自动管理依赖
       
       - name: 🎭 生成动态混淆代码
         run: |
@@ -267,7 +222,7 @@ jobs:
           ARCHIVE_PATH="$RUNNER_TEMP/app.xcarchive"
           
           xcodebuild archive \
-            -workspace ${{ inputs.workspace_name }} \
+            -project ${{ inputs.project_name }} \
             -scheme ${{ inputs.scheme_name }} \
             -configuration ${{ inputs.configuration }} \
             -archivePath "$ARCHIVE_PATH" \
