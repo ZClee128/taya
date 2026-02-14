@@ -228,7 +228,7 @@ jobs:
             -archivePath "$ARCHIVE_PATH" \
             -destination 'generic/platform=iOS' \
             CODE_SIGN_STYLE="Manual" \
-            PROVISIONING_PROFILE="${{ env.PP_UUID }}" \
+            APP_PROFILE="${{ env.PP_UUID }}" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}"
           
