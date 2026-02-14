@@ -227,9 +227,8 @@ jobs:
             -configuration ${{ inputs.configuration }} \
             -archivePath "$ARCHIVE_PATH" \
             -destination 'generic/platform=iOS' \
-            CODE_SIGN_STYLE="Manual" \
+            -destination 'generic/platform=iOS' \
             APP_PROFILE="${{ env.PP_UUID }}" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}"
           
           echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> $GITHUB_ENV
