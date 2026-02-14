@@ -629,7 +629,7 @@
 		};
 		84E8C76C2F40CC5B003B1E6D /* XCRemoteSwiftPackageReference "HandyJSON" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/alibaba/HandyJSON";
+			repositoryURL = "https://github.com/Miles-Matheson/HandyJSON.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 5.0.2;
