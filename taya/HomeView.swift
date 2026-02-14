@@ -22,7 +22,6 @@ struct HomeView: View {
             List(posts) { post in
                 PostCell(post: post, onAction: {
                     self.selectedPost = post
-                    self.showActionSheet = true
                 })
                 .background(
                     NavigationLink(destination: PostDetailView(post: post, sessionManager: sessionManager)) {
@@ -32,23 +31,21 @@ struct HomeView: View {
                 )
             }
             .navigationBarTitle("Taya 🌌")
-            .sheet(isPresented: $showActionSheet) {
-                if let post = selectedPost {
-                    ActionMenuSheet(
-                        user: post.user,
-                        sessionManager: sessionManager,
-                        onReport: {
-                            sessionManager.reportUser(post.user)
-                            // Delay slightly to allow sheet to dismiss before alert
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                showReportAlert = true
-                            }
-                        },
-                        onBlock: {
-                            sessionManager.blockUser(post.user)
+            .sheet(item: $selectedPost) { post in
+                ActionMenuSheet(
+                    user: post.user,
+                    sessionManager: sessionManager,
+                    onReport: {
+                        sessionManager.reportUser(post.user)
+                        // Delay slightly to allow sheet to dismiss before alert
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            showReportAlert = true
                         }
-                    )
-                }
+                    },
+                    onBlock: {
+                        sessionManager.blockUser(post.user)
+                    }
+                )
             }
             .alert(isPresented: $showReportAlert) {
                 Alert(title: Text("Report Submitted"), message: Text("Thank you for reporting. This post will be reviewed."), dismissButton: .default(Text("OK")))
@@ -64,10 +61,8 @@ struct PostCell: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: post.user.avatarName)
-                    .resizable()
-                    .frame(width: 40, height: 40)
-                    .clipShape(Circle())
+                AvatarView(username: post.user.username, size: 40, avatarName: post.user.avatarName)
+                
                 VStack(alignment: .leading) {
                     Text(post.user.username)
                         .font(.headline)
@@ -90,32 +85,37 @@ struct PostCell: View {
                 if let uiImage = UIImage(named: post.imageName) {
                     Image(uiImage: uiImage)
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxHeight: 300)
+                        .aspectRatio(4/3, contentMode: .fill) // Uniform aspect ratio
                         .frame(maxWidth: .infinity)
+                        .clipped() // Clip overflow
                 } 
                 // Try to load from bundle path (if file is loosely in project)
                 else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpeg"), let uiImage = UIImage(contentsOfFile: path) {
                      Image(uiImage: uiImage)
                          .resizable()
-                         .aspectRatio(contentMode: .fit)
-                         .frame(maxHeight: 300)
+                         .aspectRatio(4/3, contentMode: .fill)
                          .frame(maxWidth: .infinity)
+                         .clipped()
                 }
                 else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpg"), let uiImage = UIImage(contentsOfFile: path) {
                      Image(uiImage: uiImage)
                          .resizable()
-                         .aspectRatio(contentMode: .fit)
-                         .frame(maxHeight: 300)
+                         .aspectRatio(4/3, contentMode: .fill)
                          .frame(maxWidth: .infinity)
+                         .clipped()
                 }
                 // Fallback to SF Symbol
                 else {
-                    Image(systemName: post.imageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxHeight: 300)
-                        .frame(maxWidth: .infinity)
+                    ZStack {
+                        Color.gray.opacity(0.1)
+                        Image(systemName: post.imageName)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 50, height: 50)
+                            .foregroundColor(.gray)
+                    }
+                    .aspectRatio(4/3, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
                 }
                 
                 // Video Indicator
@@ -126,8 +126,8 @@ struct PostCell: View {
                          .shadow(radius: 5)
                 }
             }
-            .background(Color.black.opacity(0.1))
-            .cornerRadius(10)
+            .background(Color.black.opacity(0.05))
+            .cornerRadius(12)
 
             HStack(spacing: 20) {
                 Button(action: {}) {

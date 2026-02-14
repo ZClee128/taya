@@ -15,48 +15,64 @@ struct ActionMenuSheet: View {
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
-        NavigationView {
-            List {
-                Section {
-                    Button(action: {
-                        onBlock()
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        HStack {
-                            Text("Block User")
-                                .foregroundColor(.red)
-                            Spacer()
-                            Image(systemName: "hand.raised.fill")
-                                .foregroundColor(.red)
-                        }
-                    }
-                    
-                    Button(action: {
-                        onReport()
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        HStack {
-                            Text("Report User/Post")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Image(systemName: "exclamationmark.bubble")
-                                .foregroundColor(.primary)
-                        }
-                    }
+
+        VStack(spacing: 0) {
+            Text("Options")
+                .font(.headline)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color(UIColor.secondarySystemBackground))
+            
+            Divider()
+            
+            Button(action: {
+                onBlock()
+                presentationMode.wrappedValue.dismiss()
+            }) {
+                HStack {
+                    Text("Block User")
+                        .foregroundColor(.red)
+                    Spacer()
+                    Image(systemName: "hand.raised.fill")
+                        .foregroundColor(.red)
                 }
-                
-                Section {
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Text("Cancel")
-                            .foregroundColor(.primary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    }
-                }
+                .padding()
             }
-            .listStyle(GroupedListStyle())
-            .navigationBarTitle("Options", displayMode: .inline)
+            
+            Divider()
+            
+            Button(action: {
+                onReport()
+                presentationMode.wrappedValue.dismiss()
+            }) {
+                HStack {
+                    Text("Report User/Post")
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "exclamationmark.bubble")
+                        .foregroundColor(.primary)
+                }
+                .padding()
+            }
+            
+            Divider()
+            
+            Spacer()
+            
+            Button(action: {
+                presentationMode.wrappedValue.dismiss()
+            }) {
+                Text("Cancel")
+                    .font(.headline)
+                    .foregroundColor(.blue)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(10)
+            }
+            .padding()
         }
+        .background(Color(UIColor.systemBackground))
     }
+
 }

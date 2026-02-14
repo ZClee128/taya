@@ -21,10 +21,8 @@ struct PostDetailView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     // User Header
                     HStack {
-                        Image(systemName: post.user.avatarName)
-                            .resizable()
-                            .frame(width: 50, height: 50)
-                            .clipShape(Circle())
+                        AvatarView(username: post.user.username, size: 50, avatarName: post.user.avatarName)
+                        
                         VStack(alignment: .leading) {
                             Text(post.user.username)
                                 .font(.headline)
@@ -71,10 +69,15 @@ struct PostDetailView: View {
                                  .aspectRatio(contentMode: .fit)
                                  .frame(maxWidth: .infinity)
                         } else {
-                             Image(systemName: post.imageName)
-                                 .resizable()
-                                 .aspectRatio(contentMode: .fit)
-                                 .frame(maxWidth: .infinity)
+                             ZStack {
+                                 Color.gray.opacity(0.1)
+                                 Image(systemName: post.imageName)
+                                     .resizable()
+                                     .aspectRatio(contentMode: .fit)
+                                     .frame(width: 100, height: 100)
+                                     .foregroundColor(.gray)
+                             }
+                             .frame(maxWidth: .infinity, minHeight: 200)
                         }
                     }
 

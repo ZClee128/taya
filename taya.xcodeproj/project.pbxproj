@@ -10,6 +10,7 @@
 		1314FE46C6C1BB3EEAB759E2 /* Pods_taya.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F438D387D86A7AD9A893C27A /* Pods_taya.framework */; };
 		84C2A6E22F3E26F800EB2D03 /* ObfuscationBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */; };
 		84C2A6E52F3F488D00EB2D03 /* StringObfuscation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E32F3F488D00EB2D03 /* StringObfuscation.swift */; };
+		84C2A6E72F4010CF00EB2D03 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */; };
 		84CAA18A2F38CCD300CCCFC1 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84CAA1892F38CCD300CCCFC1 /* StoreKit.framework */; };
 		84CAA1B32F38D5F300CCCFC1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 84CAA19D2F38D5F300CCCFC1 /* Assets.xcassets */; };
 		84CAA1B42F38D5F300CCCFC1 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 84CAA1A12F38D5F300CCCFC1 /* GoogleService-Info.plist */; };
@@ -54,6 +55,7 @@
 		6D6CB38D5B0F198D85729641 /* Pods-taya.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-taya.debug.xcconfig"; path = "Target Support Files/Pods-taya/Pods-taya.debug.xcconfig"; sourceTree = "<group>"; };
 		84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObfuscationBundle.swift; sourceTree = "<group>"; };
 		84C2A6E32F3F488D00EB2D03 /* StringObfuscation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringObfuscation.swift; sourceTree = "<group>"; };
+		84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		84CAA1412F387A2E00CCCFC1 /* taya.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = taya.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		84CAA1892F38CCD300CCCFC1 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		84CAA1992F38D5F300CCCFC1 /* ActionMenuSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionMenuSheet.swift; sourceTree = "<group>"; };
@@ -156,6 +158,7 @@
 		84CAA1B22F38D5F300CCCFC1 /* taya */ = {
 			isa = PBXGroup;
 			children = (
+				84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */,
 				84C2A6E42F3F488D00EB2D03 /* Utils */,
 				84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */,
 				84CAA1CB2F38D66D00CCCFC1 /* rt */,
@@ -335,6 +338,7 @@
 				84C2A6E52F3F488D00EB2D03 /* StringObfuscation.swift in Sources */,
 				84CAA1BC2F38D5F300CCCFC1 /* AgreementView.swift in Sources */,
 				84CAA1BE2F38D5F300CCCFC1 /* ContentView.swift in Sources */,
+				84C2A6E72F4010CF00EB2D03 /* AvatarView.swift in Sources */,
 				84CAA1BF2F38D5F300CCCFC1 /* DiscoverView.swift in Sources */,
 				84CAA1C02F38D5F300CCCFC1 /* EditProfileView.swift in Sources */,
 				84CAA1C12F38D5F300CCCFC1 /* HomeView.swift in Sources */,

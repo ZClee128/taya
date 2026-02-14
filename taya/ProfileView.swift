@@ -31,10 +31,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     HStack(spacing: 20) {
-                        Image(systemName: user.avatarName)
-                            .resizable()
-                            .frame(width: 80, height: 80)
-                            .clipShape(Circle())
+                        AvatarView(username: user.username, size: 80, avatarName: user.avatarName)
                             .overlay(Circle().stroke(Color.blue, lineWidth: 2))
 
                         VStack(alignment: .leading, spacing: 5) {
@@ -127,10 +124,29 @@ struct ProfileView: View {
                             HStack(spacing: 2) {
                                 ForEach(rowPosts) { post in
                                     NavigationLink(destination: PostDetailView(post: post, sessionManager: sessionManager)) {
-                                        Image(systemName: post.imageName)
-                                            .resizable()
-                                            .aspectRatio(1, contentMode: .fit)
-                                            .background(Color.secondary.opacity(0.1))
+                                        ZStack {
+                                            if let uiImage = UIImage(named: post.imageName) {
+                                                Image(uiImage: uiImage)
+                                                    .resizable()
+                                                    .aspectRatio(contentMode: .fill)
+                                                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                                                    .clipped()
+                                            } else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpeg"), let uiImage = UIImage(contentsOfFile: path) {
+                                                 Image(uiImage: uiImage)
+                                                    .resizable()
+                                                    .aspectRatio(contentMode: .fill)
+                                                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                                                    .clipped()
+                                            } else {
+                                                Image(systemName: post.imageName)
+                                                    .resizable()
+                                                    .aspectRatio(contentMode: .fit)
+                                                    .padding(10)
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
+                                        .aspectRatio(1, contentMode: .fit)
+                                        .background(Color.secondary.opacity(0.1))
                                     }
                                     .buttonStyle(PlainButtonStyle()) // Preserve image appearance
                                 }

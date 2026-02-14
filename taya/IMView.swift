@@ -15,10 +15,7 @@ struct IMView: View {
             List(sessionManager.conversations) { conversation in
                 NavigationLink(destination: ChatDetailView(user: conversation.user, sessionManager: sessionManager)) {
                     HStack(spacing: 15) {
-                        Image(systemName: conversation.user.avatarName)
-                            .resizable()
-                            .frame(width: 50, height: 50)
-                            .clipShape(Circle())
+                        AvatarView(username: conversation.user.username, size: 50, avatarName: conversation.user.avatarName)
                             .overlay(Circle().stroke(Color.gray.opacity(0.3), lineWidth: 1))
                         
                         VStack(alignment: .leading, spacing: 5) {
@@ -71,6 +68,16 @@ struct ChatDetailView: View {
     var body: some View {
         ZStack {
             VStack {
+                // Custom Header for Chat
+                HStack {
+                    AvatarView(username: user.username, size: 40, avatarName: user.avatarName)
+                    Text(user.username)
+                        .font(.headline)
+                    Spacer()
+                }
+                .padding()
+                .background(Color(UIColor.secondarySystemBackground))
+                
                 ScrollView {
                     VStack(spacing: 15) {
                         ForEach(messages) { message in
@@ -111,7 +118,7 @@ struct ChatDetailView: View {
                 .background(Color(UIColor.systemBackground))
             }
         }
-        .navigationBarTitle(Text(user.username))
+        .navigationBarTitle(Text(""), displayMode: .inline)
         .navigationBarItems(trailing: Button(action: {
             showActionSheet = true
         }) {

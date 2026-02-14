@@ -17,7 +17,7 @@
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchImage" translatesAutoresizingMaskIntoConstraints="NO" id="fCQ-5y-Vva">
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="StartupBackground" translatesAutoresizingMaskIntoConstraints="NO" id="fCQ-5y-Vva">
                                 <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                             </imageView>
                         </subviews>
@@ -26,8 +26,8 @@
                         <constraints>
                             <constraint firstItem="fCQ-5y-Vva" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="GjR-Ps-2Rm"/>
                             <constraint firstAttribute="bottom" secondItem="fCQ-5y-Vva" secondAttribute="bottom" id="IgV-Lb-oDC"/>
-                            <constraint firstItem="fCQ-5y-Vva" firstAttribute="trailing" secondItem="6Tk-OE-BBY" secondAttribute="trailing" id="Xsj-sE-EcR"/>
-                            <constraint firstItem="fCQ-5y-Vva" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" id="xoy-8Y-YRA"/>
+                            <constraint firstItem="fCQ-5y-Vva" firstAttribute="trailing" secondItem="Ze5-6b-2t3" secondAttribute="trailing" id="Xsj-sE-EcR"/>
+                            <constraint firstItem="fCQ-5y-Vva" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="xoy-8Y-YRA"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -37,7 +37,7 @@
         </scene>
     </scenes>
     <resources>
-        <image name="LaunchImage" width="1242" height="2688"/>
+        <image name="StartupBackground" width="1242" height="2688"/>
         <systemColor name="systemBackgroundColor">
             <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
         </systemColor>

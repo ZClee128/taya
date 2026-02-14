@@ -85,6 +85,17 @@ class MockData {
         Post(user: currentUser, imageName: "sun.max.fill", description: "Solar flare activity is high today. Always wear protection when viewing the sun!", likes: 45, date: Date().addingTimeInterval(-172800), categoryName: "Events"),
         
         // Equipment
-        Post(user: User(username: "GearHead", bio: "Telescope addict", avatarName: "camera"), imageName: "camera.fill", description: "Just got my new ZWO camera. Can't wait for clear skies!", likes: 78, date: Date().addingTimeInterval(-5000), categoryName: "Equipment")
+        Post(user: User(username: "GearHead", bio: "Telescope addict", avatarName: "camera"), imageName: "camera.fill", description: "Just got my new ZWO camera. Can't wait for clear skies!", likes: 78, date: Date().addingTimeInterval(-5000), categoryName: "Equipment"),
+        
+        // More Mock Data to fill the feed
+        Post(user: User(username: "AuroraHunter", bio: "Chasing lights", avatarName: "wind.snow"), imageName: "thermometer.sun.fill", description: "The northern lights were spectacular yesterday! 💚", likes: 2100, date: Date().addingTimeInterval(-12000), categoryName: "Events"),
+        
+        Post(user: User(username: "SkyWatcher", bio: "Look up", avatarName: "eye.fill"), imageName: "cloud.moon.fill", description: "Cloudy night, but the moon is still shining through. ☁️🌙", likes: 45, date: Date().addingTimeInterval(-30000), categoryName: "Planets"),
+        
+        Post(user: User(username: "AstroDad", bio: "Teaching kids astronomy", avatarName: "person.2.fill"), imageName: "telescope", description: "Setting up the telescope for the neighborhood watch party.", likes: 156, date: Date().addingTimeInterval(-60000), categoryName: "Events"),
+        
+        Post(user: User(username: "CometChaser", bio: "Speedy rocks", avatarName: "hare.fill"), imageName: "location.north.fill", description: "Tracking the new comet path. It's moving fast!", likes: 332, date: Date().addingTimeInterval(-180000), categoryName: "Stars"),
+        
+        Post(user: User(username: "GalaxyGirl", bio: "Spiral arms", avatarName: "hurricane"), imageName: "hurricane", description: "Processing data from last week's session on M51.", likes: 890, date: Date().addingTimeInterval(-240000), categoryName: "Galaxies")
     ]
 }
