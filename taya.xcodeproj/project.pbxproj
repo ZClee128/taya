@@ -631,8 +631,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Miles-Matheson/HandyJSON.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.0.2;
+				kind = exactVersion;
+				version = "5.0.4-beta";
 			};
 		};
 		84E8C76F2F40CC91003B1E6D /* XCRemoteSwiftPackageReference "ios_sdk" */ = {

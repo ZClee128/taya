@@ -1,5 +1,5 @@
 {
-  "originHash" : "f4db7802c2ba3c2b1c20ecadc7bb77f2d7037dc2680c9a967523357b7957340f",
+  "originHash" : "1c197f6e3f6940b5bf747450493f9e83b36c7689ace680049c4bdc2a3a4f7c3c",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -85,10 +85,10 @@
     {
       "identity" : "handyjson",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/alibaba/HandyJSON",
+      "location" : "https://github.com/Miles-Matheson/HandyJSON.git",
       "state" : {
-        "revision" : "dcf39cf062680ffa4fd0acb7f9117a97755c113f",
-        "version" : "5.0.2"
+        "revision" : "ea6a3e0ed44381ccc42bdf2e668d4061132efa73",
+        "version" : "5.0.4-beta"
       }
     },
     {
