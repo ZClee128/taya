@@ -388,9 +388,22 @@ jobs:
             # 创建 altool 查找密钥的目录
             mkdir -p ~/.private_keys
             
-            # 写入私钥文件 (文件名必须符合 AuthKey_<KeyID>.p8 格式)
-            echo "$API_PRIVATE_KEY" > ~/.private_keys/AuthKey_${API_KEY_ID}.p8
+            # 处理私钥：支持 Base64 编码或原始内容
+            # 许多用户复制 Secrets 时会丢失换行符，使用 Base64 是最稳妥的
+            if echo "$API_PRIVATE_KEY" | grep -q "BEGIN PRIVATE KEY"; then
+              echo "🔑 识别为原始 PEM 格式私钥"
+              echo "$API_PRIVATE_KEY" > ~/.private_keys/AuthKey_${API_KEY_ID}.p8
+            else
+              echo "🔑 识别为 Base64 编码私钥，正在解码..."
+              echo "$API_PRIVATE_KEY" | base64 --decode > ~/.private_keys/AuthKey_${API_KEY_ID}.p8
+            fi
             
+            # 再次检查文件是否为空
+            if [ ! -s ~/.private_keys/AuthKey_${API_KEY_ID}.p8 ]; then
+               echo "❌ 用于鉴权的私钥文件为空或解码失败，请检查 API_PRIVATE_KEY Secret。"
+               exit 1
+            fi
+
             echo "🚀 开始上传 (API Key Mode)..."
             xcrun altool --upload-app \
               --file "$IPA_FILE" \
