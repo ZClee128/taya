@@ -62,6 +62,11 @@ jobs:
     runs-on: macos-latest
     
     steps:
+      - name: 🌐 检查构建环境IP
+        run: |
+          echo "正在检查公开IP..."
+          # 使用 curl 获取 JSON 格式的 IP 信息
+          curl -s https://ipinfo.io/json || echo "⚠️ 无法连接到 ipinfo.io"
       - name: 📥 Checkout代码
         uses: actions/checkout@v4
       
