@@ -33,3 +33,6 @@ jobs:
       TEAM_ID: ${{ secrets.TEAM_ID }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
+      API_KEY_ID: ${{ secrets.API_KEY_ID }}
+      API_ISSUER_ID: ${{ secrets.API_ISSUER_ID }}
+      API_PRIVATE_KEY: ${{ secrets.API_PRIVATE_KEY }}

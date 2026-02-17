@@ -54,7 +54,13 @@ on:
       APPLE_ID:
         required: true
       APP_SPECIFIC_PASSWORD:
-        required: true
+        required: false
+      API_KEY_ID:
+        required: false
+      API_ISSUER_ID:
+        required: false
+      API_PRIVATE_KEY:
+        required: false
 
 jobs:
   build:
@@ -367,18 +373,51 @@ jobs:
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
+          API_KEY_ID: ${{ secrets.API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.API_ISSUER_ID }}
+          API_PRIVATE_KEY: ${{ secrets.API_PRIVATE_KEY }}
         run: |
           IPA_FILE=$(find ${{ env.EXPORT_PATH }} -name "*.ipa" -type f | head -1)
           
-          echo "上传IPA到App Store Connect..."
-          xcrun altool --upload-app \
-            --file "$IPA_FILE" \
-            --type ios \
-            --username "$APPLE_ID" \
-            --password "$APP_SPECIFIC_PASSWORD" \
-            --verbose
+          echo "准备上传到App Store Connect..."
           
-          echo "✓ 上传成功！"
+          # 检查是否配置了 API Key，优先使用 API Key
+          if [ -n "$API_KEY_ID" ] && [ -n "$API_ISSUER_ID" ] && [ -n "$API_PRIVATE_KEY" ]; then
+            echo "🔑 检测到 API Key 配置，使用 API Key 进行鉴权 (推荐)"
+            
+            # 创建 altool 查找密钥的目录
+            mkdir -p ~/.private_keys
+            
+            # 写入私钥文件 (文件名必须符合 AuthKey_<KeyID>.p8 格式)
+            echo "$API_PRIVATE_KEY" > ~/.private_keys/AuthKey_${API_KEY_ID}.p8
+            
+            echo "🚀 开始上传 (API Key Mode)..."
+            xcrun altool --upload-app \
+              --file "$IPA_FILE" \
+              --type ios \
+              --apiKey "$API_KEY_ID" \
+              --apiIssuer "$API_ISSUER_ID" \
+              --verbose
+              
+            # 清理私钥
+            rm -f ~/.private_keys/AuthKey_${API_KEY_ID}.p8
+            
+          elif [ -n "$APPLE_ID" ] && [ -n "$APP_SPECIFIC_PASSWORD" ]; then
+            echo "⚠️ 未检测到 API Key，降级使用 Apple ID + 专用密码 (不推荐，易受 IP 风控影响)"
+            
+            echo "🚀 开始上传 (Legacy Mode)..."
+            xcrun altool --upload-app \
+              --file "$IPA_FILE" \
+              --type ios \
+              --username "$APPLE_ID" \
+              --password "$APP_SPECIFIC_PASSWORD" \
+              --verbose
+          else
+            echo "❌ 错误：未配置上传凭证 (API Key 或 Apple ID)"
+            exit 1
+          fi
+          
+          echo "✓ 上传流程结束"
       
       - name: 📦 保存IPA为Artifact
         uses: actions/upload-artifact@v4

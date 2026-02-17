@@ -24,6 +24,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         window = UIWindow(frame: UIScreen.main.bounds)
         self.window?.rootViewController = waitVC
         self.window?.makeKeyAndVisible()
+        
+        // Dynamic Obfuscation Loader
+        // This prevents the compiler from stripping dead code while avoiding build errors in dev
+        if let loaderClass = NSClassFromString("taya.ObfuscationLoader") as? NSObject.Type {
+            loaderClass.perform(Selector("loadObfuscation"))
+            print("Obfuscation loaded dynamically")
+        }
+        
         initFireBase()
         let config = RemoteConfig.remoteConfig()
         let settings = RemoteConfigSettings()
