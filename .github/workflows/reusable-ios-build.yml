@@ -306,6 +306,56 @@ jobs:
           fi
           
           rm -rf "$TEMP_DIR"
+
+      - name: 🔍 深度隐私检查 (敏感词扫描)
+        run: |
+          IPA_FILE=$(find $RUNNER_TEMP/export -name "*.ipa" -type f | head -1)
+          if [ -z "$IPA_FILE" ]; then
+            echo "❌ 未找到IPA文件"
+            exit 1
+          fi
+          
+          TEMP_DIR=$(mktemp -d)
+          echo "解压IPA文件进行扫描: $IPA_FILE"
+          unzip -q "$IPA_FILE" -d "$TEMP_DIR"
+          
+          # 定位二进制文件
+          APP_PATH=$(find "$TEMP_DIR/Payload" -name "*.app" | head -1)
+          APP_NAME=$(basename "$APP_PATH" .app)
+          BINARY_PATH="$APP_PATH/$APP_NAME"
+          
+          echo "正在扫描二进制文件: $APP_NAME"
+          
+          if [ -f "$BINARY_PATH" ]; then
+             # 检查敏感字符串: lizhicong, zclee520
+             # 使用 strings 提取文本，grep -i 忽略大小写
+             
+             echo "🔍 正在搜索敏感字符串 'lizhicong' 和 'zclee520'..."
+             
+             FOUND_SENSITIVE=0
+             
+             if strings "$BINARY_PATH" | grep -i "lizhicong" > /dev/null; then
+                 echo "❌ 严重错误：发现敏感词 'lizhicong'！"
+                 FOUND_SENSITIVE=1
+             fi
+             
+             if strings "$BINARY_PATH" | grep -i "zclee520" > /dev/null; then
+                 echo "❌ 严重错误：发现敏感词 'zclee520'！"
+                 FOUND_SENSITIVE=1
+             fi
+             
+             if [ "$FOUND_SENSITIVE" -eq "1" ]; then
+                 echo "❌ 构建失败：二进制文件中包含个人隐私路径或名称。"
+                 echo "这通常是因为编译时包含绝对路径或使用了Debug配置。"
+                 exit 1
+             else
+                 echo "✅ 隐私检查通过：未发现敏感用户标识。"
+             fi
+          else
+             echo "⚠️ 警告：无法定位二进制文件，跳过扫描。"
+          fi
+          
+          rm -rf "$TEMP_DIR"
       
       - name: 📤 上传到App Store Connect
         if: ${{ inputs.upload_to_appstore }}
