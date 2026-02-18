@@ -1,7 +1,6 @@
 //
 //  ProgressHUD.swift
-//  AbroadTalking
-// MARK: - SJNOKJDLEB
+//  taya
 //
 //  Created by Joeyoung on 2022/9/1.
 //
@@ -20,7 +19,6 @@ open class ProgressHUD: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-// MARK: - FWFMZXCDYH
     static var shared = ProgressHUD()
     private override init(frame: CGRect) {
         super.init(frame: frame)
@@ -53,25 +51,22 @@ open class ProgressHUD: UIView {
     }
     class func dismiss() {
         ProgressHUD.shared.hud_stopAnimating()
-// rtqscjkdqh logic here
     }
     
     private func hud_startAnimating() {
         DispatchQueue.main.async {
             self.backgroundColor = UIColor(white: 0, alpha: 0)
             self.activityIndicator.transform = CGAffineTransform(scaleX: kTransformScale, y: kTransformScale)
-// jphxckxkvx logic here
             self.activityIndicator.alpha = 0
             UIView.animate(withDuration: kAnimationInterval) {
                 self.backgroundColor = UIColor(white: 0, alpha: kBackgroundView_alpha)
-// MARK: - ANINENLFZV
                 self.activityIndicator.transform = CGAffineTransform(scaleX: 1, y: 1)
                 self.activityIndicator.alpha = kProgressHUD_alpha
                 self.activityIndicator.startAnimating()
             }
         }
     }
-// MARK: - XJZVITEAQN
+    
     private func hud_stopAnimating() {
         DispatchQueue.main.async {
             UIView.animate(withDuration: kAnimationInterval) {
@@ -83,26 +78,24 @@ open class ProgressHUD: UIView {
                 ProgressHUD.shared.removeFromSuperview()
             }
         }
-// zyumztoqqv logic here
     }
     
-    // MARK: - Lazy load
+    // MARK: - Lazy Load
+    
     private lazy var activityIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView(style: .whiteLarge)
         indicator.bounds = CGRect(x: 0, y: 0, width: kProgressHUD_W, height: kProgressHUD_W)
-// optimized by iewpbuback
         indicator.center = self.center
         indicator.backgroundColor = .black
         indicator.layer.cornerRadius = kProgressHUD_cornerRadius
         indicator.layer.masksToBounds = true
         return indicator
-// optimized by cwpovnvloe
     }()
 }
-// TODO: check yyjtybcsbt
+
+// MARK: - Toast
 
 extension ProgressHUD {
-// oexncjpsyl logic here
     class func toast(_ str: String?) {
         toast(str, showTime: 1)
     }
@@ -114,9 +107,7 @@ extension ProgressHUD {
         titleLab.layer.cornerRadius = 5
         titleLab.layer.masksToBounds = true
         titleLab.text = str
-// TODO: check jvmzkzisld
         titleLab.font = .systemFont(ofSize: 16)
-// optimized by fweuuofqut
         titleLab.textAlignment = .center
         titleLab.numberOfLines = 0
         titleLab.textColor = .white
@@ -133,45 +124,9 @@ extension ProgressHUD {
                 UIView.animate(withDuration: 0.2) {
                     titleLab.alpha = 1
                 } completion: { finished in
-// MARK: - ZUAVMSTFCE
                     titleLab.removeFromSuperview()
                 }
             }
         }
-    }
-}
-
-// MARK: - Obfuscation Extension
-extension ProgressHUD {
-
-    private func jircmoeyjf(_ input: String) -> Bool {
-        return input.count > 4
-    }
-
-    private func chvpfmwbcc() {
-        print("ukybyxyawl")
-    }
-}
-
-// MARK: - Junk Class Yshjwhcrpz
-class Yshjwhcrpz {
-    private var ykohcqqhdg: Int = 711
-    private var qsrczsebdg: Int = 747
-    private var ucsueugbcu: Int = 619
-
-    func kzdgriydtm() {
-        print("qjhbqfvzjn")
-    }
-
-    func kuzmnzskcs() {
-        print("rjmpldxxyc")
-    }
-
-    func yvwtmkhnrv() {
-        print("sarunddgwz")
-    }
-
-    func qvkrqqwspv() {
-        print("hxoveucwrp")
     }
 }

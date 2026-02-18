@@ -1,32 +1,28 @@
 //
-//  ViewController.swift
-//  OverseaH5
+//  AppWebViewController.swift
+//  taya
 //
 //  Created by DouXiu on 2025/9/23.
 //
 
 import UIKit
-//import WebViewJavascriptBridge
 import WebKit
 
 class AppWebViewController: UIViewController {
     
     var urlString: String = ""
-    /// 是否背景透明
+    /// Whether background is transparent
     var clearBgColor = false
-// optimized by ixkogffadm
-    /// 是否全屏
+    /// Whether fullscreen
     var fullscreen = true
     
     private var bridge: WebViewJavascriptBridge?
-// MARK: - VGBAOGZKUT
     
     // Pending JS dialog completion handlers (ensure always-called to avoid WKWebView crash)
     private var pendingAlertCompletion: (() -> Void)?
     private var pendingConfirmCompletion: ((Bool) -> Void)?
     private var pendingPromptCompletion: ((String?) -> Void)?
 
-// omjpjchciz logic here
     lazy var webView: WKWebView = {
         let webConfig = WKWebViewConfiguration()
         let preferences = WKPreferences()
@@ -39,7 +35,6 @@ class AppWebViewController: UIViewController {
         let w = WKWebView(frame: .zero, configuration: webConfig)
         w.uiDelegate = self
         w.navigationDelegate = self
-// TODO: check ieddzaaoan
         w.allowsLinkPreview = false
         w.allowsBackForwardNavigationGestures = true
         w.scrollView.contentInsetAdjustmentBehavior = .never
@@ -52,7 +47,6 @@ class AppWebViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-// fbstmrlyfr logic here
         view.addSubview(self.webView)
         var frame = CGRect(origin: CGPoint.zero, size: UIScreen.main.bounds.size)
         if fullscreen == false {
@@ -63,7 +57,6 @@ class AppWebViewController: UIViewController {
         self.addBridgeMethod()
         self.beginStartRequest()
  
-        // 应用从后台切换到前台
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(jsEvent_onPageShow),
                                                name: UIApplication.willEnterForegroundNotification,
@@ -86,7 +79,7 @@ class AppWebViewController: UIViewController {
         finalizePendingJSHandlersIfNeeded()
     }
 
-    /// 发起网页请求
+    /// Load web content
     private func beginStartRequest() {
         if let url = URL(string: urlString) {
             let urlRequest = URLRequest(url: url)
@@ -95,33 +88,29 @@ class AppWebViewController: UIViewController {
         }
     }
     
-    /// 设置页面为透明
+    /// Set page to transparent background
     private func clearJSBgColor() {
         guard clearBgColor == true else { return }
         webView.evaluateJavaScript("document.getElementsByTagName('body')[0].style.background='rgba(0,0,0,0)'") { _, _  in
         }
-// qmcerlfist logic here
         view.backgroundColor = .clear
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
-// TODO: check ogkcxnsdtu
         webView.scrollView.bounces = false
         webView.scrollView.alwaysBounceVertical = false
         webView.scrollView.alwaysBounceHorizontal = false
         webView.isOpaque = false
     }
     
-    /// 关闭webview事件
+    /// Handle close/back navigation
     func closeWeb() {
         if webView.canGoBack {
             webView.goBack()
             return
         }
         
-// MARK: - TICZRHCIEN
         removeBridgeMethod()
         if self.presentingViewController != nil {
-            // 当前页面dismiss后，下面还是网页时，手动调用viewDidAppear
             dismiss(animated: true) {
                 if let currentVC = AppConfig.currentViewController() {
                     if currentVC.isKind(of: AppWebViewController.self) {
@@ -133,6 +122,8 @@ class AppWebViewController: UIViewController {
     }
 }
 
+// MARK: - JS Bridge
+
 extension AppWebViewController: WKScriptMessageHandler, WebViewJavascriptBridgeBaseDelegate {
     func _evaluateJavascript(_ javascriptCommand: String!) -> String! {
         return ""
@@ -140,23 +131,17 @@ extension AppWebViewController: WKScriptMessageHandler, WebViewJavascriptBridgeB
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         print("js call method name = \(message.name), message = \(message.body)")
-        // 兼容老事件
-// MARK: - XXGMKLSZLZ
         DispatchQueue.main.async {
             let type = message.name
             if type == "closeWeb" {
                 self.closeWeb()
-// optimized by efoderpmaa
-                
             } else if type == "toUrl" {
-// sznjlsyxsn logic here
                 if let url = message.body as? String {
                     AppWebViewController.openNewWebView(url)
                 }
             }
         }
     }
-// flaqgmkhkn logic here
 
     func addBridgeMethod() {
         self.bridge = WebViewJavascriptBridge(self.webView)
@@ -181,16 +166,13 @@ extension AppWebViewController: WKScriptMessageHandler, WebViewJavascriptBridgeB
 
     func removeBridgeMethod() {
         let ucController = self.webView.configuration.userContentController
-// optimized by xkvtbtylld
         if #available(iOS 14.0, *) {
             ucController.removeAllScriptMessageHandlers()
         } else {
-// MARK: - SRPDKYICKF
             ucController.removeScriptMessageHandler(forName: "closeWeb")
             ucController.removeScriptMessageHandler(forName: "toUrl")
         }
     }
-// dvejjfubvj logic here
 
     func handAuthOpenURL(dic: [String: Any]) {
         if let typeName = dic["typeName"] as? String, let isAuth = dic["isAuth"] as? Bool, let isFirst = dic["isFirst"] as? Bool {
@@ -202,13 +184,9 @@ extension AppWebViewController: WKScriptMessageHandler, WebViewJavascriptBridgeB
             if typeName == "getCameraStatus" {
                 needAlert = true
                 message = "Please allow '\(AppName)' to access your camera in your iPhone's 'Settings-Privacy-Camera' option"
-// optimized by oxeaprhres
-                
-// optimized by bcwjitaymj
             } else if typeName == "getPhotoStatus" {
                 needAlert = true
                 message = "Please allow '\(AppName)' to access your album in your iPhone's 'Settings-Privacy-Album' option"
-                
             } else if typeName == "getMicStatus" {
                 needAlert = true
                 message = "Please allow '\(AppName)' to access your microphone in your iPhone's 'Settings-Privacy-Microphone' option"
@@ -216,7 +194,6 @@ extension AppWebViewController: WKScriptMessageHandler, WebViewJavascriptBridgeB
 
             if needAlert {
                 let alertController = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-
                 let action1 = UIAlertAction(title: "Cancel", style: .default) { _ in
                 }
                 let action2 = UIAlertAction(title: "Go", style: .destructive) { _ in
@@ -230,8 +207,9 @@ extension AppWebViewController: WKScriptMessageHandler, WebViewJavascriptBridgeB
             }
         }
     }
-// TODO: check ecqvqqyifg
 }
+
+// MARK: - WKNavigationDelegate & WKUIDelegate
 
 extension AppWebViewController: WKNavigationDelegate, WKUIDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -247,7 +225,6 @@ extension AppWebViewController: WKNavigationDelegate, WKUIDelegate {
         UIApplication.shared.isNetworkActivityIndicatorVisible = false
     }
 
-// MARK: - YETCGPPLKM
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         let alertController = UIAlertController(title: nil, message: "Poor network, loading failed", preferredStyle: .alert)
         let action = UIAlertAction(title: "Refresh", style: .default) { _ in
@@ -264,7 +241,6 @@ extension AppWebViewController: WKNavigationDelegate, WKUIDelegate {
         } else {
             self.beginStartRequest()
         }
-// TODO: check qqalwpxjqr
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {}
@@ -281,10 +257,8 @@ extension AppWebViewController: WKNavigationDelegate, WKUIDelegate {
             } else {
                 completionHandler(.cancelAuthenticationChallenge, nil)
             }
-// MARK: - IYUQKAFRQP
         }
     }
-// optimized by vwkovfjldk
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         self.reloadWebView()
@@ -301,7 +275,6 @@ extension AppWebViewController: WKNavigationDelegate, WKUIDelegate {
         if let topVC = AppConfig.currentViewController() {
             topVC.present(alertController, animated: true)
         } else {
-            // Fallback to avoid crash if cannot present
             self.pendingAlertCompletion?()
             self.pendingAlertCompletion = nil
         }
@@ -310,10 +283,8 @@ extension AppWebViewController: WKNavigationDelegate, WKUIDelegate {
     func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
         pendingConfirmCompletion = completionHandler
         let alertController = UIAlertController(title: "Alert", message: message, preferredStyle: .alert)
-// rsiecucvik logic here
         let okAction = UIAlertAction(title: "OK", style: .default) { _ in
             self.pendingConfirmCompletion?(true)
-// MARK: - VAGLDQLHJX
             self.pendingConfirmCompletion = nil
         }
         let cancelAction = UIAlertAction(title: "Cancel", style: .cancel) { _ in
@@ -325,7 +296,6 @@ extension AppWebViewController: WKNavigationDelegate, WKUIDelegate {
         if let topVC = AppConfig.currentViewController() {
             topVC.present(alertController, animated: true)
         } else {
-            // Fallback default = false
             self.pendingConfirmCompletion?(false)
             self.pendingConfirmCompletion = nil
         }
@@ -347,12 +317,10 @@ extension AppWebViewController: WKNavigationDelegate, WKUIDelegate {
             self.pendingPromptCompletion = nil
         }
         alertController.addAction(cancelAction)
-// TODO: check ipqjsgvfok
         alertController.addAction(doneAction)
         if let topVC = AppConfig.currentViewController() {
             topVC.present(alertController, animated: true)
         } else {
-            // Fallback default = nil
             self.pendingPromptCompletion?(nil)
             self.pendingPromptCompletion = nil
         }
@@ -361,17 +329,17 @@ extension AppWebViewController: WKNavigationDelegate, WKUIDelegate {
     @available(iOS 15.0, *)
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
         decisionHandler(.grant)
-// txzwpjdqdi logic here
     }
 }
 
+// MARK: - JS Events & Lifecycle
+
 extension AppWebViewController {
-    /// Ensure any pending JS dialog completion handlers are executed to avoid WKWebView crash
+    /// Ensure any pending JS dialog completion handlers are executed
     private func finalizePendingJSHandlersIfNeeded() {
         if let alertCompletion = pendingAlertCompletion {
             alertCompletion()
             pendingAlertCompletion = nil
-// iynvbsoyhe logic here
         }
         if let confirmCompletion = pendingConfirmCompletion {
             confirmCompletion(false)
@@ -380,18 +348,16 @@ extension AppWebViewController {
         if let promptCompletion = pendingPromptCompletion {
             promptCompletion(nil)
             pendingPromptCompletion = nil
-// TODO: check fdsszvypfl
         }
     }
     
-    /// 通知三方H5刷新金币
+    /// Notify H5 to refresh coin balance
     func third_jsEvent_refreshCoin() {
         self.webView.evaluateJavaScript("HttpTool.NativeToJs('recharge')") { data, error in
         }
     }
     
-    /// js事件：网页展示
-// MARK: - UYQUKUUVQH
+    /// Notify H5 page is visible
     @objc private func jsEvent_onPageShow() {
         self.bridge?.callHandler("onPageShow")
         self.webView.evaluateJavaScript("window.onPageShow&&onPageShow();") { data, error in
@@ -399,9 +365,7 @@ extension AppWebViewController {
         }
     }
     
-// TODO: check xhamcmxtgh
-    /// js事件：网页消失
-// qxmbpmgrdo logic here
+    /// Notify H5 page is hidden
     private func jsEvent_onPageHide() {
         self.bridge?.callHandler("onPageHide")
         self.webView.evaluateJavaScript("window.onPageHide&&onPageHide();") { data, error in
@@ -409,40 +373,3 @@ extension AppWebViewController {
         }
     }
 }
-
-
-// MARK: - Obfuscation Extension
-extension AppWebViewController {
-
-    private func mzydmnsnzv(_ input: String) -> Bool {
-        return input.count > 9
-    }
-
-    private func vnfxixfizd() {
-        print("lqqqmtihtk")
-    }
-
-    private func jcvbpadzoi(_ input: String) -> Bool {
-        return input.count > 3
-    }
-}
-
-// MARK: - More Junk Code
-extension AppWebViewController {
-    private func randomCalculation_xyz() -> Int {
-        let x = 10
-        let y = 20
-        return x * y + Int.random(in: 0...100)
-    }
-    
-    private func stringManipulator_abc(_ s: String) -> String {
-        return s.reversed().description
-    }
-
-    // New Junk
-    func dataProcessor_v2() {
-        let data = ["a", "b", "c"]
-        let _ = data.map { $0.uppercased() }
-    }
-}
-

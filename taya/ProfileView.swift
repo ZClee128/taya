@@ -17,7 +17,7 @@ struct ProfileView: View {
     
     let editCost = 32
     
-    // Fallback to mock user if session is somehow empty, though ContentView prevents this
+    // Fallback to mock user if session is somehow empty
     var user: User {
         sessionManager.currentUser ?? MockData.currentUser
     }
@@ -29,98 +29,165 @@ struct ProfileView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
-                    HStack(spacing: 20) {
-                        AvatarView(username: user.username, size: 80, avatarName: user.avatarName)
-                            .overlay(Circle().stroke(Color.blue, lineWidth: 2))
-
-                        VStack(alignment: .leading, spacing: 5) {
+                VStack(spacing: 0) {
+                    
+                    // Banner Image
+                    ZStack(alignment: .bottomLeading) {
+                        if let banner = user.bannerName, let path = Bundle.main.path(forResource: banner, ofType: nil), let uiImage = UIImage(contentsOfFile: path) { // Trying generic loading
+                             Image(uiImage: uiImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(height: 150)
+                                .clipped()
+                        } else {
+                            LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]), startPoint: .topLeading, endPoint: .bottomTrailing)
+                                .frame(height: 150)
+                        }
+                        
+                        // Avatar Overlay
+                        HStack(alignment: .bottom) {
+                            AvatarView(username: user.username, size: 80, avatarName: user.avatarName)
+                                .overlay(Circle().stroke(Color.white, lineWidth: 4))
+                                .padding(.leading, 20)
+                                .offset(y: 40) // Push down
+                            
+                            Spacer()
+                            
+                            // Edit Profile Button (Small version on banner)
+                            Button(action: {
+                                if sessionManager.coinBalance >= editCost {
+                                    showEditProfileAlert = true
+                                } else {
+                                    showInsufficientCoinsAlert = true
+                                }
+                            }) {
+                                Text("Edit")
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 20)
+                                    .background(Color.black.opacity(0.5))
+                                    .cornerRadius(20)
+                            }
+                            .padding(.bottom, 10)
+                            .padding(.trailing, 20)
+                        }
+                    }
+                    .padding(.bottom, 40) // Space for avatar offset
+                    .alert(isPresented: $showEditProfileAlert) {
+                        Alert(
+                             title: Text("Edit Profile"),
+                             message: Text("This will cost \(editCost) coins. Proceed?"),
+                             primaryButton: .default(Text("Start Editing")) {
+                                 showEditProfile = true
+                             },
+                             secondaryButton: .cancel()
+                         )
+                    }
+                    
+                    // User Info
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack {
                             Text(user.username)
                                 .font(.title)
                                 .bold()
-                            Text(user.bio)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
+                            
+                            ForEach(user.badges, id: \.self) { badge in
+                                if badge == "Verified" {
+                                    Image(systemName: "checkmark.circle.fill") // checkmark.seal.fill is iOS 14+
+                                        .foregroundColor(.blue)
+                                } else if badge == "Pro" {
+                                    Text("PRO")
+                                        .font(.system(size: 10, weight: .bold)) // caption2 is iOS 14+
+                                        .padding(4)
+                                        .background(Color.yellow)
+                                        .foregroundColor(.black)
+                                        .cornerRadius(4)
+                                }
+                            }
                         }
+                        
+                        Text(user.bio)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 2)
                     }
-                    .padding(.top, 20)
                     .padding(.horizontal)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    // Coin & Edit Profile Section
+                    // Coin Balance Row
                     HStack {
-                        // Coin Balance
                         Button(action: {
-                            showStore = true
+                             showStore = true
                         }) {
                             HStack {
                                 Image(systemName: "dollarsign.circle.fill")
                                     .foregroundColor(.yellow)
-                                Text("\(sessionManager.coinBalance)")
-                                    .fontWeight(.semibold)
+                                Text("\(sessionManager.coinBalance) Coins")
                                     .foregroundColor(.primary)
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.blue)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.gray)
                                     .font(.caption)
                             }
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
+                            .padding()
                             .background(Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(20)
-                        }
-                        
-                        Spacer()
-                        
-                        // Edit Profile Button
-                        Button(action: {
-                            if sessionManager.coinBalance >= editCost {
-                                showEditProfileAlert = true
-                            } else {
-                                showInsufficientCoinsAlert = true
-                            }
-                        }) {
-                            Text("Edit Profile (32 Coins)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 16)
-                                .background(Color.blue)
-                                .cornerRadius(20)
+                            .cornerRadius(12)
                         }
                     }
                     .padding(.horizontal)
+                    .padding(.top, 20)
 
-                    Divider()
-
+                    // Stats Row
                     HStack {
                         Spacer()
                         VStack {
-                            Text("\(userPosts.count)")
-                                .font(.headline)
+                            if #available(iOS 14.0, *) {
+                                Text("\(userPosts.count)")
+                                    .font(.title2)
+                                    .bold()
+                            } else {
+                                // Fallback on earlier versions
+                            }
                             Text("Posts")
                                 .font(.caption)
+                                .foregroundColor(.gray)
                         }
                         Spacer()
                         VStack {
-                            Text("0")
-                                .font(.headline)
+                            if #available(iOS 14.0, *) {
+                                Text("1.2k")
+                                    .font(.title2)
+                                    .bold()
+                            } else {
+                                // Fallback on earlier versions
+                            }
                             Text("Followers")
                                 .font(.caption)
+                                .foregroundColor(.gray)
                         }
                         Spacer()
                         VStack {
-                            Text("0")
-                                .font(.headline)
+                            if #available(iOS 14.0, *) {
+                                Text("450")
+                                    .font(.title2)
+                                    .bold()
+                            } else {
+                                // Fallback on earlier versions
+                            }
                             Text("Following")
                                 .font(.caption)
+                                .foregroundColor(.gray)
                         }
                         Spacer()
                     }
-                    .padding(.vertical)
+                    .padding(.vertical, 20)
 
-                    // Post Grid
+                    Divider()
+                    
+                    // Post Grid (iOS 13 Compatible)
                     VStack(spacing: 2) {
-                        ForEach(gridRows(posts: userPosts), id: \.self) { rowPosts in
+                        ForEach(chunkedPosts(), id: \.self) { rowPosts in
                             HStack(spacing: 2) {
                                 ForEach(rowPosts) { post in
                                     NavigationLink(destination: PostDetailView(post: post, sessionManager: sessionManager)) {
@@ -129,28 +196,30 @@ struct ProfileView: View {
                                                 Image(uiImage: uiImage)
                                                     .resizable()
                                                     .aspectRatio(contentMode: .fill)
-                                                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                                                    .frame(minWidth: 0, maxWidth: .infinity)
+                                                    .aspectRatio(1, contentMode: .fit)
                                                     .clipped()
                                             } else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpeg"), let uiImage = UIImage(contentsOfFile: path) {
                                                  Image(uiImage: uiImage)
                                                     .resizable()
                                                     .aspectRatio(contentMode: .fill)
-                                                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                                                    .frame(minWidth: 0, maxWidth: .infinity)
+                                                    .aspectRatio(1, contentMode: .fit)
                                                     .clipped()
                                             } else {
-                                                Image(systemName: post.imageName)
-                                                    .resizable()
-                                                    .aspectRatio(contentMode: .fit)
-                                                    .padding(10)
-                                                    .foregroundColor(.gray)
+                                                Rectangle()
+                                                    .fill(Color.gray.opacity(0.2))
+                                                    .aspectRatio(1, contentMode: .fit)
+                                                    .overlay(
+                                                        Image(systemName: post.imageName)
+                                                            .foregroundColor(.gray)
+                                                    )
                                             }
                                         }
-                                        .aspectRatio(1, contentMode: .fit)
-                                        .background(Color.secondary.opacity(0.1))
                                     }
-                                    .buttonStyle(PlainButtonStyle()) // Preserve image appearance
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                                // Fill empty spaces
+                                // Filler for last row
                                 ForEach(0..<(3 - rowPosts.count), id: \.self) { _ in
                                     Color.clear
                                         .aspectRatio(1, contentMode: .fit)
@@ -169,69 +238,72 @@ struct ProfileView: View {
                             .foregroundColor(.white)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color.red)
+                            .background(Color.red.opacity(0.8))
                             .cornerRadius(12)
-                    }
-                    .alert(isPresented: $showingDeleteAlert) {
-                        Alert(title: Text("Delete Account"),
-                              message: Text("Are you sure you want to delete your account? This action cannot be undone."),
-                              primaryButton: .destructive(Text("Delete")) {
-                                sessionManager.deleteAccount()
-                              },
-                              secondaryButton: .cancel())
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 20)
                 }
             }
-            .navigationBarTitle("Profile 👤", displayMode: .inline)
+            .navigationBarHidden(true) // Hide nav bar to show banner
             .sheet(isPresented: $showStore) {
                 StoreView(sessionManager: sessionManager)
             }
             .sheet(isPresented: $showEditProfile) {
                 EditProfileView(sessionManager: sessionManager)
             }
-            .alert(isPresented: $showInsufficientCoinsAlert) {
-                Alert(
-                    title: Text("Insufficient Coins"),
-                    message: Text("You need \(editCost) coins to edit your profile. Would you like to recharge?"),
-                    primaryButton: .default(Text("Go to Store")) {
-                        showStore = true
-                    },
-                    secondaryButton: .cancel()
-                )
+            .alert(isPresented: $showingDeleteAlert) {
+                Alert(title: Text("Delete Account"),
+                      message: Text("Are you sure you want to delete your account? This action cannot be undone."),
+                      primaryButton: .destructive(Text("Delete")) {
+                        sessionManager.deleteAccount()
+                      },
+                      secondaryButton: .cancel())
             }
-            // We need a second alert for confirmation, but iOS 13 only supports one .alert per view nicely.
-            // We can workaround or simpler: just do the check action logic in the button.
-            // Let's use a workaround: Bind different alerts? No, simpler to use logic.
-            // Actually, let's keep it simple: "Confirm spend" alert.
         }
-        // Additional alert attachment for confirmation specific logic
-        .alert(isPresented: $showEditProfileAlert) {
-             Alert(
-                 title: Text("Edit Profile"),
-                 message: Text("This will cost \(editCost) coins. Proceed?"),
-                 primaryButton: .default(Text("Start Editing")) {
-                     // Coin deduction moved to EditProfileView upon saving
-                     showEditProfile = true
-                 },
-                 secondaryButton: .cancel()
-             )
-         }
+        .alert(isPresented: $showInsufficientCoinsAlert) {
+            Alert(
+                title: Text("Insufficient Coins"),
+                message: Text("You need \(editCost) coins to edit your profile. Would you like to recharge?"),
+                primaryButton: .default(Text("Go to Store")) {
+                    showStore = true
+                },
+                secondaryButton: .cancel()
+            )
+        }
+        // Attach the specific edit profile confirmation here, or to the button itself if possible
+        // To avoid conflict, let's attach it to the NavigationView content via a background modifier or similar if needed,
+        // but simplest is to just chain them if they are mutually exclusive (which they are).
+        // However, iOS 13/14 sometimes struggles with multiple .alerts on the same view.
+        // Best practice: Attach to the button that triggers it or different parts of the hierarchy.
+        
+        // Let's attach this one to the ZStack (Banner) inside the ScrollView for "Edit Profile" logic
     }
 
-    func gridRows(posts: [Post]) -> [[Post]] {
-        var rows: [[Post]] = []
-        for i in stride(from: 0, to: posts.count, by: 3) {
-            var row: [Post] = []
-            for j in 0..<3 {
-                if i + j < posts.count {
-                    row.append(posts[i + j])
-                }
-            }
-            rows.append(row)
+    // iOS 13 compatible grid helper
+    func chunkedPosts() -> [[Post]] {
+        var chunks: [[Post]] = []
+        let columnCount = 3
+        for i in stride(from: 0, to: userPosts.count, by: columnCount) {
+            let end = min(i + columnCount, userPosts.count)
+            let chunk = Array(userPosts[i..<end])
+            chunks.append(chunk)
         }
-        return rows
+        return chunks
+    }
+}
+
+// Extension to make it cleaner
+extension View {
+    func editProfileAlert(isPresented: Binding<Bool>, onConfirm: @escaping () -> Void) -> some View {
+        self.alert(isPresented: isPresented) {
+            Alert(
+                 title: Text("Edit Profile"),
+                 message: Text("This will cost 32 coins. Proceed?"),
+                 primaryButton: .default(Text("Start Editing"), action: onConfirm),
+                 secondaryButton: .cancel()
+             )
+        }
     }
 }
 

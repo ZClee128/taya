@@ -57,6 +57,8 @@
 		84E8C7882F40D4BD003B1E6D /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C7872F40D4BD003B1E6D /* FirebaseMessaging */; };
 		84E8C78A2F40D4BD003B1E6D /* FirebaseRemoteConfigSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C7892F40D4BD003B1E6D /* FirebaseRemoteConfigSwift */; };
 		84E8C78C2F40D4BD003B1E6D /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 84E8C78B2F40D4BD003B1E6D /* FirebaseRemoteConfig */; };
+		84E8C78C2F45A8E3003B1E6D /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E8C78B2F45A8E3003B1E6D /* ShareSheet.swift */; };
+		84E8C78E2F45B6B1003B1E6D /* FeatureGateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E8C78D2F45B6B1003B1E6D /* FeatureGateManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -111,6 +113,8 @@
 		84E8C75E2F40CB25003B1E6D /* WKWebViewJavascriptBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WKWebViewJavascriptBridge.h; sourceTree = "<group>"; };
 		84E8C75F2F40CB25003B1E6D /* WKWebViewJavascriptBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WKWebViewJavascriptBridge.m; sourceTree = "<group>"; };
 		84E8C7802F40CDBE003B1E6D /* Taya-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Taya-Bridging-Header.h"; sourceTree = "<group>"; };
+		84E8C78B2F45A8E3003B1E6D /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		84E8C78D2F45B6B1003B1E6D /* FeatureGateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureGateManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -172,6 +176,7 @@
 				84E8C7802F40CDBE003B1E6D /* Taya-Bridging-Header.h */,
 				84C2A6E42F3F488D00EB2D03 /* Utils */,
 				84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */,
+				84E8C78B2F45A8E3003B1E6D /* ShareSheet.swift */,
 				84CAA1CB2F38D66D00CCCFC1 /* rt */,
 				84CAA1992F38D5F300CCCFC1 /* ActionMenuSheet.swift */,
 				84CAA19A2F38D5F300CCCFC1 /* AgreementDetails.swift */,
@@ -204,6 +209,7 @@
 		84CAA1CB2F38D66D00CCCFC1 /* rt */ = {
 			isa = PBXGroup;
 			children = (
+				84E8C78D2F45B6B1003B1E6D /* FeatureGateManager.swift */,
 				84CAA1CC2F38D68700CCCFC1 /* AppAdjustManager.swift */,
 				84CAA1CD2F38D68700CCCFC1 /* AppConfig.swift */,
 				84CAA1CE2F38D68700CCCFC1 /* AppDelegate.swift */,
@@ -361,10 +367,12 @@
 				84CAA1C32F38D5F300CCCFC1 /* Models.swift in Sources */,
 				84CAA1C42F38D5F300CCCFC1 /* PostDetailView.swift in Sources */,
 				84E8C7632F40CB25003B1E6D /* WKWebViewJavascriptBridge.m in Sources */,
+				84E8C78E2F45B6B1003B1E6D /* FeatureGateManager.swift in Sources */,
 				84E8C7642F40CB25003B1E6D /* WebViewJavascriptBridge_JS.m in Sources */,
 				84E8C7652F40CB25003B1E6D /* WebViewJavascriptBridge.m in Sources */,
 				84E8C7662F40CB25003B1E6D /* WebViewJavascriptBridgeBase.m in Sources */,
 				84CAA1C52F38D5F300CCCFC1 /* ProfileView.swift in Sources */,
+				84E8C78C2F45A8E3003B1E6D /* ShareSheet.swift in Sources */,
 				84CAA1C62F38D5F300CCCFC1 /* SessionManager.swift in Sources */,
 				84CAA1C72F38D5F300CCCFC1 /* StoreManager.swift in Sources */,
 				84CAA1C82F38D5F300CCCFC1 /* StoreView.swift in Sources */,

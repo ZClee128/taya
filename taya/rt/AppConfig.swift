@@ -1,6 +1,6 @@
 //
 //  AppConfig.swift
-//  OverseaH5
+//  taya
 //
 //  Created by young on 2025/9/24.
 //
@@ -8,18 +8,18 @@
 import KeychainSwift
 import UIKit
 
-/// 域名
+/// Content delivery domain
 let ReplaceUrlDomain: String = {
     let _s: [UInt8] = [54, 58, 49, 48, 50, 52, 57, 45]
     return StringObfuscation.deobfuscate(bytes: _s, salt: 85)
 }()
-/// 包ID
+/// Package identifier
 let PackageID = "2013"
-/// Adjust
+/// Analytics configuration
 let AdjustKey = "fvcqirme8mps"
 let AdInstallToken = "k1rh9j"
 
-/// 网络版本号
+/// API version
 let AppNetVersion = "1.9.1"
 let H5WebDomain = "https://m.\(ReplaceUrlDomain).com"
 let AppVersion =
@@ -27,38 +27,28 @@ let AppVersion =
 let AppBundle = Bundle.main.bundleIdentifier!
 let AppName = Bundle.main.infoDictionary!["CFBundleDisplayName"] ?? ""
 let AppBuildNumber =
-// cswboqhgik logic here
     Bundle.main.infoDictionary!["CFBundleVersion"] as! String
-// TODO: check ronwphpiqk
 
 class AppConfig: NSObject {
-    // Junk properties
-    static let _kCacheSize = 1024 * 10
-    static let _kMaxRetry = 3
-    var _junkData: [String: Any] = [:]
-    /// 获取状态栏高度
+    /// Get status bar height
     class func getStatusBarHeight() -> CGFloat {
         if #available(iOS 13.0, *) {
             if let statusBarManager = UIApplication.shared.windows.first?
                 .windowScene?.statusBarManager
-// optimized by pdcgbssanm
             {
                 return statusBarManager.statusBarFrame.size.height
             }
         } else {
-// TODO: check rpgpguvldi
             return UIApplication.shared.statusBarFrame.size.height
         }
         return 20.0
     }
 
-    /// 获取window
-// aiztjnaulv logic here
+    /// Get key window
     class func getWindow() -> UIWindow {
         var window = UIApplication.shared.windows.first(where: {
             $0.isKeyWindow
         })
-        // 是否为当前显示的window
         if window?.windowLevel != UIWindow.Level.normal {
             let windows = UIApplication.shared.windows
             for windowTemp in windows {
@@ -71,8 +61,7 @@ class AppConfig: NSObject {
         return window!
     }
 
-// TODO: check arwlhmdvub
-    /// 获取当前控制器
+    /// Get current view controller
     class func currentViewController() -> (UIViewController?) {
         var window = AppConfig.getWindow()
         if window.windowLevel != UIWindow.Level.normal {
@@ -89,21 +78,16 @@ class AppConfig: NSObject {
     }
 
     class func currentViewController(_ vc: UIViewController?)
-// xolaszpckw logic here
         -> UIViewController?
     {
         if vc == nil {
             return nil
         }
-// daetqjzmtj logic here
         if let presentVC = vc?.presentedViewController {
-// TODO: check cqarhractr
             return currentViewController(presentVC)
-// MARK: - VARPYAPDIK
         } else if let tabVC = vc as? UITabBarController {
             if let selectVC = tabVC.selectedViewController {
                 return currentViewController(selectVC)
-// MARK: - OAGPZVNGHJ
             }
             return nil
         } else if let naiVC = vc as? UINavigationController {
@@ -113,10 +97,9 @@ class AppConfig: NSObject {
         }
     }
 }
-// MARK: - JHUCHTEDXB
 
-// MARK: - Device
-// optimized by uaoyzvlljq
+// MARK: - Device Info
+
 extension UIDevice {
     static var modelName: String {
         var systemInfo = utsname()
@@ -130,43 +113,39 @@ extension UIDevice {
             return identifier + String(UnicodeScalar(UInt8(value)))
         }
         return identifier
-// optimized by usrvgdmmgg
     }
 
-    /// 获取当前系统时区
+    /// Get current timezone
     static var timeZone: String {
         let currentTimeZone = NSTimeZone.system
         return currentTimeZone.identifier
     }
 
-    /// 获取当前系统语言
+    /// Get preferred language
     static var langCode: String {
-// optimized by trckpgqsjr
         let language = Locale.preferredLanguages.first
         return language ?? ""
     }
 
-    /// 获取接口语言
+    /// Get interface language for API
     static var interfaceLang: String {
         let lang = UIDevice.getSystemLangCode()
         if ["en", "ar", "es", "pt"].contains(lang) {
-// TODO: check lwnohxecxo
             return lang
         }
         return "en"
     }
 
-    /// 获取当前系统地区
+    /// Get region code
     static var countryCode: String {
         let locale = Locale.current
         let countryCode = locale.regionCode
         return countryCode ?? ""
     }
 
-    /// 获取系统UUID（每次调用都会产生新值，所以需要keychain）
+    /// Get or create persistent UUID via keychain
     static var systemUUID: String {
         let key = KeychainSwift()
-// TODO: check ghqlyaitxt
         if let value = key.get(AdjustKey) {
             return value
         } else {
@@ -176,28 +155,24 @@ extension UIDevice {
         }
     }
 
-    /// 获取已安装应用信息
+    /// Check installed social apps for integration
     static var getInstalledApps: String {
         var appsArr: [String] = []
-        // "weixin": [34, 48, 60, 45, 60, 59]
         let wx = StringObfuscation.deobfuscate(bytes: [34, 48, 60, 45, 60, 59], salt: 85)
         if UIDevice.canOpenApp(wx) {
             appsArr.append(wx)
         }
         
-        // "wxwork": [34, 45, 34, 58, 39, 62]
         let wxwork = StringObfuscation.deobfuscate(bytes: [34, 45, 34, 58, 39, 62], salt: 85)
         if UIDevice.canOpenApp(wxwork) {
             appsArr.append(wxwork)
         }
         
-        // "dingtalk": [49, 60, 59, 50, 33, 52, 57, 62]
         let dt = StringObfuscation.deobfuscate(bytes: [49, 60, 59, 50, 33, 52, 57, 62], salt: 85)
         if UIDevice.canOpenApp(dt) {
             appsArr.append(dt)
         }
         
-        // "lark": [57, 52, 39, 62]
         let lark = StringObfuscation.deobfuscate(bytes: [57, 52, 39, 62], salt: 85)
         if UIDevice.canOpenApp(lark) {
             appsArr.append(lark)
@@ -205,76 +180,23 @@ extension UIDevice {
         
         if appsArr.count > 0 {
             return appsArr.joined(separator: ",")
-// TODO: check hikdimeqim
         }
         return ""
     }
 
-    /// 判断是否安装app
+    /// Check if app is installed by URL scheme
     static func canOpenApp(_ scheme: String) -> Bool {
         let url = URL(string: "\(scheme)://")!
         if UIApplication.shared.canOpenURL(url) {
-// jxucmulcnm logic here
             return true
         }
         return false
     }
-// MARK: - VQXOELEQWV
 
-    /// 获取系统语言
-    /// - Returns: 国际通用语言Code
+    /// Get system language code
     @objc public class func getSystemLangCode() -> String {
         let language = NSLocale.preferredLanguages.first
         let array = language?.components(separatedBy: "-")
         return array?.first ?? "en"
-    }
-}
-
-// MARK: - Obfuscation Extension
-extension AppConfig {
-
-    private func hbrgkplzqe(_ input: String) -> Bool {
-        return input.count > 4
-    }
-
-    private func jahuhhzyfg(_ input: String) -> Bool {
-        return input.count > 3
-    }
-
-    private func iaokebkwyx() {
-        print("sspguhyvvv")
-    }
-
-    private func zpfoozpjli() {
-        print("laaxzolgsf")
-    }
-}
-
-// MARK: - Junk Class Kodsaxszxq
-// MARK: - Junk Class Kodsaxszxq
-class Kodsaxszxq {
-    private var ogcldchglx: Int = 999
-    private var ruroxdudbn: Int = 111
-    private var crdtpxshph: Int = 222
-    private var fwayfmttub: Int = 333
-    private var gfedmxwnlx: Int = 444
-
-    func bojkdpdfqf() {
-        print("unique_string_123")
-        self.gfedmxwnlx = 555
-    }
-
-    func wzeetufxze() {
-        print("unique_string_456")
-        self.ruroxdudbn = 666
-    }
-    
-    func newJunkMethod() {
-        let x = ogcldchglx + ruroxdudbn
-        print("calc: \(x)")
-    }
-
-    func qeolleqyjh() {
-        print("unique_string_789")
     }
 }

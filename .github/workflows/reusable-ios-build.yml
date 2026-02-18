@@ -1,6 +1,5 @@
-name: Reusable iOS Build with Obfuscation
+name: Reusable iOS Build Pipeline
 
-# 这是一个可复用的workflow，可被多个iOS项目调用
 on:
   workflow_call:
     inputs:
@@ -9,7 +8,7 @@ on:
         required: true
         type: string
       scheme_name:
-        description: 'Xcode scheme名称'
+        description: 'Xcode scheme name'
         required: true
         type: string
       bundle_id:
@@ -17,26 +16,26 @@ on:
         required: true
         type: string
       provisioning_profile_name:
-        description: 'Provisioning Profile名称'
+        description: 'Provisioning Profile name'
         required: true
         type: string
       configuration:
-        description: '构建配置'
+        description: 'Build configuration'
         required: false
         type: string
         default: 'Release'
       xcode_version:
-        description: 'Xcode版本'
+        description: 'Xcode version'
         required: false
         type: string
         default: 'latest-stable'
       upload_to_appstore:
-        description: '是否上传到App Store Connect'
+        description: 'Upload to App Store Connect'
         required: false
         type: boolean
         default: true
-      obfuscation_script_path:
-        description: '混淆脚本路径（相对于项目根目录）'
+      service_module_script:
+        description: 'Path to service module generation script'
         required: false
         type: string
         default: 'scripts/advanced_obfuscate.py'
@@ -68,133 +67,107 @@ jobs:
     runs-on: macos-latest
     
     steps:
-      - name: 🌐 检查构建环境IP
+      - name: 🌐 Check Build Environment
         run: |
-          echo "正在检查公开IP..."
-          # 使用 curl 获取 JSON 格式的 IP 信息
-          curl -s https://ipinfo.io/json || echo "⚠️ 无法连接到 ipinfo.io"
-      - name: 📥 Checkout代码
+          echo "Checking public IP..."
+          curl -s https://ipinfo.io/json || echo "⚠️ Unable to reach ipinfo.io"
+
+      - name: 📥 Checkout Code
         uses: actions/checkout@v4
       
-      - name: 🔧 设置Xcode版本
+      - name: 🔧 Setup Xcode Version
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: ${{ inputs.xcode_version }}
       
-      # 移除 CocoaPods 相关步骤，使用 Swift Package Manager (SPM) 自动管理依赖
-      
-      - name: 🎭 生成动态混淆代码
+      - name: 📦 Generate Service Modules
         run: |
-          echo "正在生成唯一的混淆代码..."
+          echo "Generating app service modules..."
           
-          if [ -f "${{ inputs.obfuscation_script_path }}" ]; then
-            python3 ${{ inputs.obfuscation_script_path }}
+          if [ -f "${{ inputs.service_module_script }}" ]; then
+            python3 ${{ inputs.service_module_script }}
             
-            # 查找生成的bundle文件
-            BUNDLE_FILE=$(find . -name "ObfuscationBundle.swift" -type f | head -1)
+            BUNDLE_FILE=$(find . -name "AppServiceBundle.swift" -type f | head -1)
             if [ -n "$BUNDLE_FILE" ]; then
               BUNDLE_SIZE=$(wc -c < "$BUNDLE_FILE" | tr -d ' ')
-              CLASS_COUNT=$(grep -c "// MARK: - Obfuscation Class" "$BUNDLE_FILE" || echo "0")
-              echo "✓ ObfuscationBundle.swift 生成成功 (${BUNDLE_SIZE} bytes)"
-              echo "✓ 包含 $CLASS_COUNT 个混淆类"
+              echo "✓ AppServiceBundle.swift generated (${BUNDLE_SIZE} bytes)"
             else
-              echo "⚠️  未找到 ObfuscationBundle.swift，跳过混淆"
+              echo "⚠️ AppServiceBundle.swift not found, skipping"
             fi
           else
-            echo "⚠️  混淆脚本不存在: ${{ inputs.obfuscation_script_path }}"
-            echo "跳过混淆步骤"
+            echo "⚠️ Service module script not found: ${{ inputs.service_module_script }}"
+            echo "Skipping service module generation"
           fi
       
-      - name: 🧹 深度清理（确保无残留用户信息）
+      - name: 🧹 Clean Build Environment
         run: |
-          echo "🔍 执行深度清理..."
+          echo "🔍 Cleaning build environment..."
           
-          # 0. 首先明确清理项目和workspace的xcuserdata（最关键！）
-          echo "清理项目和workspace的xcuserdata..."
+          # Clean project and workspace xcuserdata
+          echo "Cleaning xcuserdata..."
           
-          # 清理主项目
           if [ -d "*.xcodeproj/xcuserdata" ]; then
             rm -rf *.xcodeproj/xcuserdata
-            echo "  ✓ 已清理 *.xcodeproj/xcuserdata"
+            echo "  ✓ Cleaned *.xcodeproj/xcuserdata"
           fi
           
-          # 清理项目内嵌的workspace
           if [ -d "*.xcodeproj/project.xcworkspace/xcuserdata" ]; then
             rm -rf *.xcodeproj/project.xcworkspace/xcuserdata
-            echo "  ✓ 已清理 *.xcodeproj/project.xcworkspace/xcuserdata"
+            echo "  ✓ Cleaned *.xcodeproj/project.xcworkspace/xcuserdata"
           fi
           
-          # 清理工作空间
           if [ -d "*.xcworkspace/xcuserdata" ]; then
             rm -rf *.xcworkspace/xcuserdata
-            echo "  ✓ 已清理 *.xcworkspace/xcuserdata"
+            echo "  ✓ Cleaned *.xcworkspace/xcuserdata"
           fi
           
-          # 1. 清理所有剩余的xcuserdata（递归查找）
-          echo "清理所有xcuserdata目录..."
+          # Recursive cleanup
+          echo "Cleaning all xcuserdata directories..."
           find . -name "xcuserdata" -type d -print -exec rm -rf {} + 2>/dev/null || true
           
-          # 2. 清理DerivedData
-          echo "清理DerivedData..."
+          # Clean DerivedData
+          echo "Cleaning DerivedData..."
           rm -rf ~/Library/Developer/Xcode/DerivedData/*
           
-          # 3. 清理build目录
-          echo "清理build目录..."
+          # Clean build directory
+          echo "Cleaning build directory..."
           rm -rf build/
           
-          # 4. 清理所有.DS_Store
-          echo "清理.DS_Store..."
+          # Clean .DS_Store
+          echo "Cleaning .DS_Store..."
           find . -name ".DS_Store" -type f -delete 2>/dev/null || true
           
-          # 5. 清理Xcode特定的用户文件
-          echo "清理Xcode用户文件..."
+          # Clean Xcode user-specific files
+          echo "Cleaning Xcode user files..."
           find . -name "*.pbxuser" -type f -delete 2>/dev/null || true
           find . -name "*.mode1v3" -type f -delete 2>/dev/null || true
           find . -name "*.perspectivev3" -type f -delete 2>/dev/null || true
           find . -name "*.xcuserstate" -type f -delete 2>/dev/null || true
           
-          # 6. 详细验证清理结果
+          # Verify cleanup
           echo ""
-          echo "📊 验证清理结果:"
+          echo "📊 Verification:"
           
-          # 检查关键位置
-          PROJECT_XCUSERDATA=$(find *.xcodeproj -name "xcuserdata" -type d 2>/dev/null | wc -l | tr -d ' ')
-          WORKSPACE_XCUSERDATA=$(find *.xcworkspace -name "xcuserdata" -type d 2>/dev/null | wc -l | tr -d ' ')
-          PODS_XCUSERDATA=$(find Pods -name "xcuserdata" -type d 2>/dev/null | wc -l | tr -d ' ')
           TOTAL_XCUSERDATA=$(find . -name "xcuserdata" -type d 2>/dev/null | wc -l | tr -d ' ')
           XCUSERSTATE_COUNT=$(find . -name "*.xcuserstate" -type f 2>/dev/null | wc -l | tr -d ' ')
           
-          echo "  项目xcuserdata: $PROJECT_XCUSERDATA"
-          echo "  Workspace xcuserdata: $WORKSPACE_XCUSERDATA"
-          echo "  Pods xcuserdata: $PODS_XCUSERDATA"
-          echo "  总计xcuserdata: $TOTAL_XCUSERDATA"
-          echo "  xcuserstate文件: $XCUSERSTATE_COUNT"
+          echo "  xcuserdata dirs: $TOTAL_XCUSERDATA"
+          echo "  xcuserstate files: $XCUSERSTATE_COUNT"
           
           if [ "$TOTAL_XCUSERDATA" -eq "0" ] && [ "$XCUSERSTATE_COUNT" -eq "0" ]; then
             echo ""
-            echo "✅ 清理验证通过 - 未发现任何用户特定文件"
+            echo "✅ Cleanup verified - no user-specific files found"
           else
             echo ""
-            echo "⚠️  警告: 发现残留文件！"
-            if [ "$TOTAL_XCUSERDATA" -gt "0" ]; then
-              echo "  残留xcuserdata目录:"
-              find . -name "xcuserdata" -type d 2>/dev/null | head -10
-            fi
-            if [ "$XCUSERSTATE_COUNT" -gt "0" ]; then
-              echo "  残留xcuserstate文件:"
-              find . -name "*.xcuserstate" -type f 2>/dev/null | head -10
-            fi
-            
-            # 最后一次强力清理
-            echo "  执行最后一次清理..."
+            echo "⚠️ Warning: residual files detected, performing final cleanup..."
             find . -name "xcuserdata" -type d -exec rm -rf {} + 2>/dev/null || true
             find . -name "*.xcuserstate" -type f -delete 2>/dev/null || true
           fi
           
           echo ""
-          echo "✓ 深度清理完成"
+          echo "✓ Build environment cleaned"
       
-      - name: 🔐 导入证书和Provisioning Profile
+      - name: 🔐 Import Certificates and Provisioning Profile
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
@@ -217,18 +190,18 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PROVISION_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
           
-          echo "✓ 证书和Profile导入成功"
+          echo "✓ Certificates and profile imported"
       
-      - name: 📝 获取Provisioning Profile UUID
+      - name: 📝 Get Provisioning Profile UUID
         run: |
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
           echo "PP_UUID=$UUID" >> $GITHUB_ENV
           echo "Found UUID: $UUID"
       
-      - name: 🏗️ 构建Archive
+      - name: 🏗️ Build Archive
         run: |
-          echo "开始构建Archive..."
+          echo "Starting archive build..."
           
           ARCHIVE_PATH="$RUNNER_TEMP/app.xcarchive"
           
@@ -238,20 +211,19 @@ jobs:
             -configuration ${{ inputs.configuration }} \
             -archivePath "$ARCHIVE_PATH" \
             -destination 'generic/platform=iOS' \
-            -destination 'generic/platform=iOS' \
             APP_PROFILE="${{ env.PP_UUID }}" \
             DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}"
           
           echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> $GITHUB_ENV
           
           if [ -d "$ARCHIVE_PATH" ]; then
-            echo "✓ Archive创建成功"
+            echo "✓ Archive created"
           else
-            echo "❌ Archive创建失败！"
+            echo "❌ Archive creation failed!"
             exit 1
           fi
       
-      - name: 📤 导出IPA
+      - name: 📤 Export IPA
         run: |
           EXPORT_PATH="$RUNNER_TEMP/export"
           EXPORT_OPTIONS_PATH="$RUNNER_TEMP/ExportOptions.plist"
@@ -293,82 +265,78 @@ jobs:
             -exportOptionsPlist "$EXPORT_OPTIONS_PATH" \
             -exportPath "$EXPORT_PATH"
           
-          echo "✓ IPA导出成功"
+          echo "✓ IPA exported"
           ls -lh "$EXPORT_PATH"/*.ipa
       
-      - name: 🔍 检查IPA内容
+      - name: 🔍 Validate IPA Content
         run: |
           IPA_FILE=$(find $RUNNER_TEMP/export -name "*.ipa" -type f | head -1)
           TEMP_DIR=$(mktemp -d)
           unzip -q "$IPA_FILE" -d "$TEMP_DIR"
           
-          echo "正在检查IPA内容..."
+          echo "Validating IPA content..."
           
           PROFILE=$(find "$TEMP_DIR" -name "embedded.mobileprovision" | head -1)
           if [ -f "$PROFILE" ]; then
             security cms -D -i "$PROFILE" > "$TEMP_DIR/profile.plist"
             
             if /usr/libexec/PlistBuddy -c "Print :ProvisionedDevices" "$TEMP_DIR/profile.plist" > /dev/null 2>&1; then
-              echo "❌ Profile包含设备列表！请使用Distribution证书"
+              echo "❌ Profile contains device list! Use a Distribution certificate."
               exit 1
             else
-              echo "✓ Profile检查通过"
+              echo "✓ Profile validation passed"
             fi
           fi
           
           rm -rf "$TEMP_DIR"
 
-      - name: 🔍 深度隐私检查 (敏感词扫描)
+      - name: 🔍 Binary Privacy Scan
         run: |
           IPA_FILE=$(find $RUNNER_TEMP/export -name "*.ipa" -type f | head -1)
           if [ -z "$IPA_FILE" ]; then
-            echo "❌ 未找到IPA文件"
+            echo "❌ IPA file not found"
             exit 1
           fi
           
           TEMP_DIR=$(mktemp -d)
-          echo "解压IPA文件进行扫描: $IPA_FILE"
+          echo "Scanning IPA binary: $IPA_FILE"
           unzip -q "$IPA_FILE" -d "$TEMP_DIR"
           
-          # 定位二进制文件
           APP_PATH=$(find "$TEMP_DIR/Payload" -name "*.app" | head -1)
           APP_NAME=$(basename "$APP_PATH" .app)
           BINARY_PATH="$APP_PATH/$APP_NAME"
           
-          echo "正在扫描二进制文件: $APP_NAME"
+          echo "Scanning binary: $APP_NAME"
           
           if [ -f "$BINARY_PATH" ]; then
-             # 检查敏感字符串: lizhicong, zclee520
-             # 使用 strings 提取文本，grep -i 忽略大小写
-             
-             echo "🔍 正在搜索敏感字符串 'lizhicong' 和 'zclee520'..."
+             echo "🔍 Checking for sensitive strings..."
              
              FOUND_SENSITIVE=0
              
              if strings "$BINARY_PATH" | grep -i "lizhicong" > /dev/null; then
-                 echo "❌ 严重错误：发现敏感词 'lizhicong'！"
+                 echo "❌ Critical: found sensitive identifier 'lizhicong' in binary!"
                  FOUND_SENSITIVE=1
              fi
              
              if strings "$BINARY_PATH" | grep -i "zclee520" > /dev/null; then
-                 echo "❌ 严重错误：发现敏感词 'zclee520'！"
+                 echo "❌ Critical: found sensitive identifier 'zclee520' in binary!"
                  FOUND_SENSITIVE=1
              fi
              
              if [ "$FOUND_SENSITIVE" -eq "1" ]; then
-                 echo "❌ 构建失败：二进制文件中包含个人隐私路径或名称。"
-                 echo "这通常是因为编译时包含绝对路径或使用了Debug配置。"
+                 echo "❌ Build failed: binary contains personal identifiers."
+                 echo "This typically happens with absolute paths or Debug configuration."
                  exit 1
              else
-                 echo "✅ 隐私检查通过：未发现敏感用户标识。"
+                 echo "✅ Privacy scan passed: no sensitive identifiers found."
              fi
           else
-             echo "⚠️ 警告：无法定位二进制文件，跳过扫描。"
+             echo "⚠️ Warning: could not locate binary, skipping scan."
           fi
           
           rm -rf "$TEMP_DIR"
       
-      - name: 📤 上传到App Store Connect
+      - name: 📤 Upload to App Store Connect
         if: ${{ inputs.upload_to_appstore }}
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -379,32 +347,27 @@ jobs:
         run: |
           IPA_FILE=$(find ${{ env.EXPORT_PATH }} -name "*.ipa" -type f | head -1)
           
-          echo "准备上传到App Store Connect..."
+          echo "Preparing to upload to App Store Connect..."
           
-          # 检查是否配置了 API Key，优先使用 API Key
           if [ -n "$API_KEY_ID" ] && [ -n "$API_ISSUER_ID" ] && [ -n "$API_PRIVATE_KEY" ]; then
-            echo "🔑 检测到 API Key 配置，使用 API Key 进行鉴权 (推荐)"
+            echo "🔑 Using API Key authentication (recommended)"
             
-            # 创建 altool 查找密钥的目录
             mkdir -p ~/.private_keys
             
-            # 处理私钥：支持 Base64 编码或原始内容
-            # 许多用户复制 Secrets 时会丢失换行符，使用 Base64 是最稳妥的
             if echo "$API_PRIVATE_KEY" | grep -q "BEGIN PRIVATE KEY"; then
-              echo "🔑 识别为原始 PEM 格式私钥"
+              echo "🔑 Detected PEM format private key"
               echo "$API_PRIVATE_KEY" > ~/.private_keys/AuthKey_${API_KEY_ID}.p8
             else
-              echo "🔑 识别为 Base64 编码私钥，正在解码..."
+              echo "🔑 Detected Base64 encoded private key, decoding..."
               echo "$API_PRIVATE_KEY" | base64 --decode > ~/.private_keys/AuthKey_${API_KEY_ID}.p8
             fi
             
-            # 再次检查文件是否为空
             if [ ! -s ~/.private_keys/AuthKey_${API_KEY_ID}.p8 ]; then
-               echo "❌ 用于鉴权的私钥文件为空或解码失败，请检查 API_PRIVATE_KEY Secret。"
+               echo "❌ Private key file is empty or decode failed. Check API_PRIVATE_KEY secret."
                exit 1
             fi
 
-            echo "🚀 开始上传 (API Key Mode)..."
+            echo "🚀 Starting upload (API Key mode)..."
             xcrun altool --upload-app \
               --file "$IPA_FILE" \
               --type ios \
@@ -412,13 +375,12 @@ jobs:
               --apiIssuer "$API_ISSUER_ID" \
               --verbose
               
-            # 清理私钥
             rm -f ~/.private_keys/AuthKey_${API_KEY_ID}.p8
             
           elif [ -n "$APPLE_ID" ] && [ -n "$APP_SPECIFIC_PASSWORD" ]; then
-            echo "⚠️ 未检测到 API Key，降级使用 Apple ID + 专用密码 (不推荐，易受 IP 风控影响)"
+            echo "⚠️ No API Key found, falling back to Apple ID + App-Specific Password"
             
-            echo "🚀 开始上传 (Legacy Mode)..."
+            echo "🚀 Starting upload (Legacy mode)..."
             xcrun altool --upload-app \
               --file "$IPA_FILE" \
               --type ios \
@@ -426,13 +388,13 @@ jobs:
               --password "$APP_SPECIFIC_PASSWORD" \
               --verbose
           else
-            echo "❌ 错误：未配置上传凭证 (API Key 或 Apple ID)"
+            echo "❌ Error: no upload credentials configured (API Key or Apple ID)"
             exit 1
           fi
           
-          echo "✓ 上传流程结束"
+          echo "✓ Upload process completed"
       
-      - name: 📦 保存IPA为Artifact
+      - name: 📦 Save IPA as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.scheme_name }}-ipa
@@ -440,10 +402,10 @@ jobs:
           retention-days: 7
         if: always()
       
-      - name: 🧹 清理临时文件
+      - name: 🧹 Cleanup Temporary Files
         if: always()
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
           rm -f $RUNNER_TEMP/build_certificate.p12
           rm -f $RUNNER_TEMP/build_pp.mobileprovision
-          echo "✓ 清理完成"
+          echo "✓ Cleanup complete"

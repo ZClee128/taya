@@ -13,6 +13,15 @@ struct User: Identifiable, Hashable, Codable {
     var username: String
     var bio: String
     var avatarName: String // System image name for simplicity in mock
+    var bannerName: String? // New: Banner image
+    var badges: [String] = [] // New: User badges (e.g. "Verified", "Pro")
+}
+
+struct Comment: Identifiable, Hashable, Codable {
+    var id = UUID()
+    let user: User
+    let text: String
+    let date: Date
 }
 
 struct Post: Identifiable, Hashable, Codable {
@@ -20,10 +29,13 @@ struct Post: Identifiable, Hashable, Codable {
     let user: User
     let imageName: String // System image name or asset name
     let description: String
-    let likes: Int
+    var likes: Int
     let date: Date
     var categoryName: String? // Optional for backwards compatibility, but we'll use it for filtering
     var videoName: String? // Name of local video file (e.g. "1.mp4")
+    var isBookmarked: Bool = false // New: Bookmark state
+    var isLiked: Bool = false // New: Like state
+    var comments: [Comment] = [] // New: Comments
 }
 
 struct Message: Identifiable, Hashable, Codable {
@@ -42,17 +54,23 @@ struct Conversation: Identifiable, Hashable, Codable {
     var messages: [Message] = []
 }
 
-struct Category: Identifiable {
+struct Category: Identifiable, Hashable {
     let id = UUID()
     let name: String
     let iconName: String
 }
 
 class MockData {
-    static let currentUser = User(username: "Stargazer99", bio: "Exploring the cosmos one star at a time. ✨🔭", avatarName: "person.circle.fill")
+    static let currentUser = User(
+        username: "Stargazer99",
+        bio: "Exploring the cosmos one star at a time. ✨🔭",
+        avatarName: "person.circle.fill",
+        bannerName: "star.mp4", // Using a video as a banner for dynamic effect or just a static image
+        badges: ["Verified", "Pro"]
+    )
     
     static let categories = [
-        Category(name: "Planets", iconName: "circle.grid.hex"),
+        Category(name: "Planets", iconName: "circle.grid.3x3.fill"), // iOS 13 safe
         Category(name: "Galaxies", iconName: "sparkles"),
         Category(name: "Stars", iconName: "star.fill"),
         Category(name: "Nebulas", iconName: "cloud.fill"),
@@ -63,12 +81,17 @@ class MockData {
     static let posts = [
         // Video Posts (Top Priority)
         // Note: Using "sky" and "star" as per actual files found in directory
-        Post(user: User(username: "NatureLover", bio: "Capturing the wild", avatarName: "leaf.fill"), imageName: "sky", description: "Amazing nature scene! 🌿📹", likes: 1024, date: Date(), categoryName: "Events", videoName: "sky"),
-        Post(user: User(username: "CityVibes", bio: "Urban explorer", avatarName: "building.2.fill"), imageName: "star", description: "City lights at night. 🌃✨", likes: 856, date: Date().addingTimeInterval(-100), categoryName: "Events", videoName: "star"),
+        Post(user: User(username: "NatureLover", bio: "Capturing the wild", avatarName: "leaf.fill", badges: ["Verified"]), imageName: "sky", description: "Amazing nature scene! 🌿📹", likes: 1024, date: Date(), categoryName: "Events", videoName: "sky", comments: [
+            Comment(user: User(username: "SkyWatcher", bio: "", avatarName: "eye.fill"), text: "This is breathtaking!", date: Date().addingTimeInterval(-300)),
+            Comment(user: currentUser, text: "Great shot!", date: Date().addingTimeInterval(-60))
+        ]),
+        Post(user: User(username: "CityVibes", bio: "Urban explorer", avatarName: "building.2.fill"), imageName: "star", description: "City lights at night. 🌃✨", likes: 856, date: Date().addingTimeInterval(-100), categoryName: "Events", videoName: "star", comments: [
+             Comment(user: User(username: "ProPhoto", bio: "", avatarName: "camera"), text: "What settings did you use?", date: Date().addingTimeInterval(-1200))
+        ]),
 
         // Planets
         Post(user: currentUser, imageName: "moon.fill", description: "Beautiful full moon tonight! Captured with my 8-inch Dobsonian.", likes: 124, date: Date().addingTimeInterval(-3600), categoryName: "Planets"),
-        Post(user: User(username: "MarsRover", bio: "Red Planet Fan", avatarName: "circle.fill"), imageName: "circle.fill", description: "Mars is visible near the horizon. Look at that red hue!", likes: 55, date: Date().addingTimeInterval(-10000), categoryName: "Planets"),
+        Post(user: User(username: "MarsRover", bio: "Red Planet Fan", avatarName: "circle.fill", badges: ["Pro"]), imageName: "circle.fill", description: "Mars is visible near the horizon. Look at that red hue!", likes: 55, date: Date().addingTimeInterval(-10000), categoryName: "Planets"),
         
         // Stars
         Post(user: User(username: "CosmicRay", bio: "Astro photographer", avatarName: "person.fill"), imageName: "star.fill", description: "Betelgeuse is looking particularly bright lately.", likes: 89, date: Date().addingTimeInterval(-7200), categoryName: "Stars"),
@@ -96,6 +119,6 @@ class MockData {
         
         Post(user: User(username: "CometChaser", bio: "Speedy rocks", avatarName: "hare.fill"), imageName: "location.north.fill", description: "Tracking the new comet path. It's moving fast!", likes: 332, date: Date().addingTimeInterval(-180000), categoryName: "Stars"),
         
-        Post(user: User(username: "GalaxyGirl", bio: "Spiral arms", avatarName: "hurricane"), imageName: "hurricane", description: "Processing data from last week's session on M51.", likes: 890, date: Date().addingTimeInterval(-240000), categoryName: "Galaxies")
+        Post(user: User(username: "GalaxyGirl", bio: "Spiral arms", avatarName: "hurricane", badges: ["Verified"]), imageName: "hurricane", description: "Processing data from last week's session on M51.", likes: 890, date: Date().addingTimeInterval(-240000), categoryName: "Galaxies")
     ]
 }

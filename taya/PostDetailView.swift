@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct PostDetailView: View {
     let post: Post
@@ -14,9 +15,14 @@ struct PostDetailView: View {
     @State private var showActionSheet = false
     @State private var showReportAlert = false
     @State private var isPlaying = true // Control video playback
+    @State private var localComments: [Comment] = []
+    @State private var newCommentText = ""
+    @State private var showShareSheet = false
+    @ObservedObject private var keyboard = KeyboardResponder()
 
     var body: some View {
-        ZStack {
+        VStack(spacing: 0) {
+            // Scrollable content area
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     // User Header
@@ -37,47 +43,44 @@ struct PostDetailView: View {
 
                     // Main Image or Video
                     if let videoName = post.videoName {
-                        // Check if file exists (just to double check, though VideoPlayerView handles it)
                         if Bundle.main.url(forResource: videoName, withExtension: "mp4") != nil || Bundle.main.path(forResource: videoName, ofType: "mp4") != nil {
                             VideoPlayerView(videoName: videoName, isPlaying: $isPlaying)
                                 .frame(height: 300)
                                 .frame(maxWidth: .infinity)
                                 .background(Color.black)
                         } else {
-                            // Fallback to image if video is missing
-                             Image(systemName: post.imageName)
-                                 .resizable()
-                                 .aspectRatio(contentMode: .fit)
-                                 .frame(maxWidth: .infinity)
-                                 .background(Color.black.opacity(0.1))
+                            Image(systemName: post.imageName)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.black.opacity(0.1))
                         }
                     } else {
-                        // Fallback to Image (Try Asset -> jpeg -> jpg -> System)
                         if let uiImage = UIImage(named: post.imageName) {
-                             Image(uiImage: uiImage)
-                                 .resizable()
-                                 .aspectRatio(contentMode: .fit)
-                                 .frame(maxWidth: .infinity)
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity)
                         } else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpeg"), let uiImage = UIImage(contentsOfFile: path) {
-                             Image(uiImage: uiImage)
-                                 .resizable()
-                                 .aspectRatio(contentMode: .fit)
-                                 .frame(maxWidth: .infinity)
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity)
                         } else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpg"), let uiImage = UIImage(contentsOfFile: path) {
-                             Image(uiImage: uiImage)
-                                 .resizable()
-                                 .aspectRatio(contentMode: .fit)
-                                 .frame(maxWidth: .infinity)
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity)
                         } else {
-                             ZStack {
-                                 Color.gray.opacity(0.1)
-                                 Image(systemName: post.imageName)
-                                     .resizable()
-                                     .aspectRatio(contentMode: .fit)
-                                     .frame(width: 100, height: 100)
-                                     .foregroundColor(.gray)
-                             }
-                             .frame(maxWidth: .infinity, minHeight: 200)
+                            ZStack {
+                                Color.gray.opacity(0.1)
+                                Image(systemName: post.imageName)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 100, height: 100)
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 200)
                         }
                     }
 
@@ -108,16 +111,89 @@ struct PostDetailView: View {
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 20)
+                    
+                    Divider()
+                    
+                    // Comments Section
+                    VStack(alignment: .leading, spacing: 15) {
+                        Text("Comments")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        if localComments.isEmpty {
+                            Text("No comments yet. Be the first to share your thoughts!")
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal)
+                                .padding(.bottom, 20)
+                        } else {
+                            ForEach(localComments) { comment in
+                                HStack(alignment: .top, spacing: 10) {
+                                    AvatarView(username: comment.user.username, size: 30, avatarName: comment.user.avatarName)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Text(comment.user.username)
+                                                .font(.subheadline)
+                                                .bold()
+                                            Spacer()
+                                            Text(offsetDate(comment.date))
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                        }
+                                        
+                                        Text(comment.text)
+                                            .font(.body)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 10)
                 }
             }
+            
+            // Comment Input (Footer) - always visible at bottom
+            VStack(spacing: 0) {
+                Divider()
+                HStack {
+                    TextField("Add a comment...", text: $newCommentText)
+                        .padding(10)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(20)
+                    
+                    Button(action: addComment) {
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(newCommentText.isEmpty ? .gray : .blue)
+                    }
+                    .disabled(newCommentText.isEmpty)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+            }
+            .background(Color(UIColor.systemBackground))
+        }
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .navigationBarTitle(Text("Post"), displayMode: .inline)
-        .navigationBarItems(trailing: Button(action: {
-            showActionSheet = true
-        }) {
-            Image(systemName: "ellipsis")
-                .foregroundColor(.primary)
-                .padding()
+        .navigationBarItems(trailing: HStack {
+            Button(action: {
+                showShareSheet = true
+            }) {
+                Image(systemName: "square.and.arrow.up")
+                    .imageScale(.large)
+            }
+            
+            Button(action: {
+                showActionSheet = true
+            }) {
+                Image(systemName: "ellipsis")
+                    .imageScale(.large)
+                    .padding(.leading, 8)
+            }
         })
         .sheet(isPresented: $showActionSheet) {
             ActionMenuSheet(
@@ -131,16 +207,19 @@ struct PostDetailView: View {
                 },
                 onBlock: {
                     sessionManager.blockUser(post.user)
-                    // PostDetailView will be dismissed by parent reload or we can force dismiss
                     presentationMode.wrappedValue.dismiss()
                 }
             )
         }
+        .background(EmptyView().sheet(isPresented: $showShareSheet) {
+            ShareSheet(activityItems: ["Check out this post by \(post.user.username) on Taya!"])
+        })
         .alert(isPresented: $showReportAlert) {
             Alert(title: Text("Report Submitted"), message: Text("Thank you for reporting. We will review this content shortly."), dismissButton: .default(Text("OK")))
         }
         .onAppear {
             self.isPlaying = true
+            self.localComments = post.comments.sorted(by: { $0.date < $1.date })
         }
         .onDisappear {
             self.isPlaying = false
@@ -153,10 +232,52 @@ struct PostDetailView: View {
         formatter.timeStyle = .none
         return formatter.string(from: post.date)
     }
+    
+    func offsetDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+    
+    func addComment() {
+        guard !newCommentText.isEmpty, let currentUser = sessionManager.currentUser else { return }
+        let newComment = Comment(user: currentUser, text: newCommentText, date: Date())
+        withAnimation {
+            localComments.append(newComment)
+            newCommentText = ""
+        }
+    }
 }
 
 struct PostDetailView_Previews: PreviewProvider {
     static var previews: some View {
         PostDetailView(post: MockData.posts[0], sessionManager: SessionManager())
+    }
+}
+
+// MARK: - Keyboard Responder
+
+final class KeyboardResponder: ObservableObject {
+    @Published var currentHeight: CGFloat = 0
+    var cancellable: AnyCancellable?
+
+    init() {
+        self.cancellable = NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)
+            .merge(with: NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification))
+            .compactMap { notification -> CGFloat? in
+                if notification.name == UIResponder.keyboardWillHideNotification {
+                    return 0
+                }
+                guard let userInfo = notification.userInfo,
+                      let endFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+                    return nil
+                }
+                return endFrame.height
+            }
+            .assign(to: \.currentHeight, on: self)
+    }
+    
+    deinit {
+        cancellable?.cancel()
     }
 }

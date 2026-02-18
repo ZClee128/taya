@@ -12,15 +12,14 @@ class AppRequestModel: NSObject {
     }
 }
 
-/// 通用Model
+/// Standard API response model
 struct AppBaseResponse: HandyJSON {
-    var errno: Int!  // 服务端返回码
-    var msg: String? // 服务端返回码
-    var data: Any?   // 具体的data的格式和业务相关，故用泛型定义
+    var errno: Int!
+    var msg: String?
+    var data: Any?
 }
 
-// TODO: check rbqkdpymot
-/// 通用Model
+/// Error response model
 public struct AppErrorResponse {
     let errorCode: Int
     let errorMsg: String
@@ -30,30 +29,9 @@ public struct AppErrorResponse {
     }
 }
 
-// ldosdgxvnc logic here
+/// API result status codes
 enum RequestResultCode: Int {
     case Normal         = 0
-    case NetError       = -10000      // w
-    case NeedReLogin    = -100        // 需要重新登录
-}
-
-
-// MARK: - Obfuscation Extension
-extension AppRequestModel {
-
-    private func tnihtboewc(_ input: String) -> Bool {
-        return input.count > 6
-    }
-
-    private func nnzhfdztpo(_ input: String) -> Bool {
-        return input.count > 1
-    }
-
-    private func fdvsuknbph(_ input: String) -> Bool {
-        return input.count > 3
-    }
-
-    private func qgxtkbezoo() {
-        print("ltonxpjqwp")
-    }
+    case NetError       = -10000
+    case NeedReLogin    = -100
 }

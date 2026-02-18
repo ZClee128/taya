@@ -10,7 +10,7 @@ import AVKit
 
 struct VideoPlayerView: UIViewRepresentable {
     let videoName: String
-    @Binding var isPlaying: Bool // Explicit control
+    @Binding var isPlaying: Bool
     
     func makeUIView(context: Context) -> UIView {
         let view = PlayerUIView(frame: .zero)
@@ -23,16 +23,14 @@ struct VideoPlayerView: UIViewRepresentable {
         if !isPlaying {
             context.coordinator.player?.pause()
         } else {
-            // Only play if we have a player and it's not playing (optional, mostly for resume)
-            if context.coordinator.player?.rate == 0 {
+            if context.coordinator.player?.rate == 0 && context.coordinator.player?.error == nil {
                 context.coordinator.player?.play()
             }
         }
     }
     
     static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
-        coordinator.player?.pause()
-        coordinator.player = nil
+        coordinator.cleanup()
     }
     
     func makeCoordinator() -> Coordinator {
@@ -43,11 +41,18 @@ struct VideoPlayerView: UIViewRepresentable {
         var player: AVPlayer?
         weak var playerLayer: AVPlayerLayer?
         
+        func cleanup() {
+            NotificationCenter.default.removeObserver(self)
+            player?.pause()
+            player?.replaceCurrentItem(with: nil)
+            playerLayer?.player = nil
+            player = nil
+        }
+        
         func setup(in view: UIView, videoName: String) {
             guard let layer = view.layer as? AVPlayerLayer else { return }
             self.playerLayer = layer
             
-             // Try identifying the file
             var videoURL: URL?
             if let url = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
                 videoURL = url
@@ -57,14 +62,12 @@ struct VideoPlayerView: UIViewRepresentable {
             
             if let url = videoURL {
                 let player = AVPlayer(url: url)
-                player.actionAtItemEnd = .none // Prevent pausing at end
+                player.actionAtItemEnd = .none
                 self.player = player
                 
-                // Initial attach
                 layer.player = player
                 layer.videoGravity = .resizeAspect
                 
-                // Observe Looping
                 NotificationCenter.default.addObserver(
                     self,
                     selector: #selector(playerItemDidReachEnd(notification:)),
@@ -72,7 +75,6 @@ struct VideoPlayerView: UIViewRepresentable {
                     object: player.currentItem
                 )
                 
-                // Observe Backgrounding (To keep audio playing)
                 NotificationCenter.default.addObserver(
                     self,
                     selector: #selector(appDidEnterBackground),
@@ -97,23 +99,19 @@ struct VideoPlayerView: UIViewRepresentable {
         }
         
         @objc func appDidEnterBackground() {
-            // Detach player from layer to allow background audio to continue
-            // (AVPlayerLayer forces pause if attached and backgrounded)
             playerLayer?.player = nil
         }
         
         @objc func appWillEnterForeground() {
-            // Re-attach player to layer
             playerLayer?.player = player
             player?.play()
         }
         
         deinit {
-            NotificationCenter.default.removeObserver(self)
+            cleanup()
         }
     }
     
-    // Custom UIView to hold the layer
     class PlayerUIView: UIView {
         override static var layerClass: AnyClass {
             return AVPlayerLayer.self

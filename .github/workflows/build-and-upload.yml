@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       upload_to_appstore:
-        description: '是否上传到App Store Connect'
+        description: 'Upload to App Store Connect'
         required: true
         default: 'true'
         type: choice
@@ -24,7 +24,7 @@ jobs:
       configuration: "Release"
       xcode_version: "latest-stable"
       upload_to_appstore: ${{ github.event.inputs.upload_to_appstore == 'true' }}
-      obfuscation_script_path: "scripts/advanced_obfuscate.py"
+      service_module_script: "scripts/advanced_obfuscate.py"
     secrets:
       BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
       P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
