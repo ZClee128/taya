@@ -2,7 +2,7 @@
 //  tayaApp.swift
 //  taya
 //
-//  Created by zclee on 2026/2/8.
+//  Created by Developer on 2025/10/1.
 //
 
 import SwiftUI

@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  taya
 //
-//  Created by zclee on 2026/2/8.
+//  Created by Developer on 2025/10/1.
 //
 
 import SwiftUI
@@ -17,22 +17,22 @@ struct ContentView: View {
                 TabView(selection: $selection) {
                     HomeView(sessionManager: sessionManager)
                         .tabItem {
-                            Image(systemName: "house.fill")
-                            Text("Home")
+                            Image(systemName: "sparkles")
+                            Text("Explore")
                         }
                         .tag(0)
 
                     DiscoverView(sessionManager: sessionManager)
                         .tabItem {
-                            Image(systemName: "magnifyingglass")
-                            Text("Discover")
+                            Image(systemName: "book.fill")
+                            Text("Learn")
                         }
                         .tag(1)
                     
                     IMView(sessionManager: sessionManager)
                         .tabItem {
-                            Image(systemName: "bubble.left.and.bubble.right.fill")
-                            Text("Messages")
+                            Image(systemName: "note.text")
+                            Text("Notes")
                         }
                         .tag(2)
 

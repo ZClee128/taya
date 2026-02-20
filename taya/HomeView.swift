@@ -2,7 +2,7 @@
 //  HomeView.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/8.
+//  Created by Developer on 2025/10/10.
 //
 
 import SwiftUI
@@ -12,7 +12,7 @@ struct HomeView: View {
     @State private var showActionSheet = false
     @State private var showReportAlert = false
     @State private var selectedPost: Post?
-    @State private var feedType = 0 // 0: For You, 1: Following
+    @State private var feedType = 0 // 0: Featured, 1: Saved
     
     @State private var sortedPosts: [Post] = [] // For stability if needed, but computed property is fine for now
     @State private var postToShare: Post? // For share sheet
@@ -23,7 +23,7 @@ struct HomeView: View {
     var posts: [Post] {
         let allPosts = MockData.posts.filter { !sessionManager.blockedUserIds.contains($0.user.id) }
         if feedType == 1 {
-            // Mock "Following" by just taking a subset or shuffling
+            // Mock "Saved" by just taking a subset
             return Array(allPosts.prefix(5))
         }
         return allPosts
@@ -34,46 +34,46 @@ struct HomeView: View {
             VStack(spacing: 0) {
                 // ... (picker) ...
                 // Top Bar with Toggle
-                HStack {
-                    Picker("", selection: $feedType) {
-                        Text("For You").tag(0)
-                        Text("Following").tag(1)
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .frame(width: 200)
-                    .padding(.vertical, 8)
-                }
-                .background(Color(UIColor.systemBackground))
+//                HStack {
+//                    Picker("", selection: $feedType) {
+//                        Text("Featured").tag(0)
+//                        Text("Saved").tag(1)
+//                    }
+//                    .pickerStyle(SegmentedPickerStyle())
+//                    .frame(width: 200)
+//                    .padding(.vertical, 8)
+//                }
+//                .background(Color(UIColor.systemBackground))
                 
                 List {
                     // ... (stories) ...
                     // Stories Section
-                    if feedType == 0 {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 15) {
-                                ForEach(stories, id: \.self) { user in
-                                    VStack {
-                                        AvatarView(username: user.username, size: 60, avatarName: user.avatarName)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(
-                                                        LinearGradient(gradient: Gradient(colors: [.purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing),
-                                                        lineWidth: 3
-                                                    )
-                                            )
-                                        Text(user.username)
-                                            .font(.caption)
-                                            .lineLimit(1)
-                                            .frame(width: 70)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 10)
-                        }
-                        .listRowInsets(EdgeInsets()) // Remove default list padding
-                        .padding(.vertical, 5)
-                    }
+//                    if feedType == 0 {
+//                        ScrollView(.horizontal, showsIndicators: false) {
+//                            HStack(spacing: 15) {
+//                                ForEach(stories, id: \.self) { user in
+//                                    VStack {
+//                                        AvatarView(username: user.username, size: 60, avatarName: user.avatarName)
+//                                            .overlay(
+//                                                Circle()
+//                                                    .stroke(
+//                                                        LinearGradient(gradient: Gradient(colors: [.purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing),
+//                                                        lineWidth: 3
+//                                                    )
+//                                            )
+//                                        Text(user.username)
+//                                            .font(.caption)
+//                                            .lineLimit(1)
+//                                            .frame(width: 70)
+//                                    }
+//                                }
+//                            }
+//                            .padding(.horizontal)
+//                            .padding(.vertical, 10)
+//                        }
+//                        .listRowInsets(EdgeInsets()) // Remove default list padding
+//                        .padding(.vertical, 5)
+//                    }
 
                     ForEach(posts) { post in
                         PostCell(post: post, onAction: {

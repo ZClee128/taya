@@ -2,7 +2,7 @@
 //  SplashScreenController.swift
 //  taya
 //
-//  Created by DouXiu on 2025/11/27.
+//  Created by Developer on 2025/11/27.
 //
 
 import UIKit

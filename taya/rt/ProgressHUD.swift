@@ -2,7 +2,7 @@
 //  ProgressHUD.swift
 //  taya
 //
-//  Created by Joeyoung on 2022/9/1.
+//  Created by Developer on 2022/9/1.
 //
 
 import UIKit

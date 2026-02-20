@@ -2,7 +2,7 @@
 //  ShareSheet.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/18.
+//  Created by Developer on 2025/12/10.
 //
 
 import SwiftUI

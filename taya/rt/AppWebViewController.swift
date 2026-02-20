@@ -2,7 +2,7 @@
 //  AppWebViewController.swift
 //  taya
 //
-//  Created by DouXiu on 2025/9/23.
+//  Created by Developer on 2025/9/23.
 //
 
 import UIKit

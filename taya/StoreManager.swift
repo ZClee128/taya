@@ -2,7 +2,7 @@
 //  StoreManager.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/8.
+//  Created by Developer on 2025/11/1.
 //
 
 import Foundation

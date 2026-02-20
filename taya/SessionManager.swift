@@ -2,12 +2,13 @@
 //  SessionManager.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/8.
+//  Created by Developer on 2025/10/12.
 //
 
 import Foundation
 import Combine
 import SwiftUI
+import AuthenticationServices
 
 class SessionManager: ObservableObject {
     @Published var currentUser: User?
@@ -15,42 +16,153 @@ class SessionManager: ObservableObject {
     @Published var conversations: [Conversation] = []
     @Published var blockedUserIds: [UUID] = []
     @Published var coinBalance: Int = 0
+    @Published var authError: String?
     
-    // Quick random names for account generation
-    private let randomNames = ["StarWalker", "NebulaSeeker", "CosmicDust", "PlanetHunter", "AstroGeek", "MoonChild", "GalaxyRider", "SolarWind", "CometChaser", "VoidVoyager"]
+    // Apple Sign In user identifier
+    private var appleUserID: String? {
+        get { UserDefaults.standard.string(forKey: "appleUserID") }
+        set { UserDefaults.standard.set(newValue, forKey: "appleUserID") }
+    }
+    
     private let randomAvatars = ["person.circle.fill", "moon.stars.fill", "star.circle.fill", "sparkles", "sun.max.fill"]
     
     init() {
         loadSession()
+        checkAppleCredentialState()
     }
     
-    func createAccount() {
-        // Simulate random account generation
-        let randomName = randomNames.randomElement() ?? "User\(Int.random(in: 1000...9999))"
-        let randomAvatar = randomAvatars.randomElement() ?? "person.circle.fill"
-        let newUser = User(username: randomName, bio: "Just joined Taya! Ready to explore the universe.", avatarName: randomAvatar)
-        
-        self.currentUser = newUser
-        self.isLoggedIn = true
-        saveUser(newUser)
-        
-        // Generate new conversations for the new account
-        generateNewConversations()
-        
-        // Initial bonus
-        addCoins(10)
+    // MARK: - Sign in with Apple
+    
+    func handleAppleSignIn(result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+                let userID = appleIDCredential.user
+                self.appleUserID = userID
+                
+                // Try to restore previously saved user for this Apple ID
+                let userKey = "appleUser_\(userID)"
+                if let data = UserDefaults.standard.data(forKey: userKey),
+                   let existingUser = try? JSONDecoder().decode(User.self, from: data) {
+                    self.currentUser = existingUser
+                    saveUser(existingUser)
+                } else {
+                    // Build display name from Apple credential
+                    var displayName = ""
+                    if let fullName = appleIDCredential.fullName {
+                        let parts = [fullName.givenName, fullName.familyName].compactMap { $0 }
+                        if !parts.isEmpty {
+                            displayName = parts.joined(separator: " ")
+                        }
+                    }
+                    
+                    // Use email prefix as fallback
+                    if displayName.isEmpty, let email = appleIDCredential.email {
+                        displayName = String(email.prefix(while: { $0 != "@" }))
+                    }
+                    
+                    // Generate unique name from Apple user ID if still empty
+                    if displayName.isEmpty {
+                        let names = ["StarWalker", "CosmicRay", "NebulaStar", "MoonGazer", "SkyLens",
+                                     "OrbitMind", "AstroVue", "DeepField", "NovaSpot", "SolarWind",
+                                     "PulsarFan", "GalaxyEye", "CometTrail", "ZenithSky", "LunarPath"]
+                        let hash = abs(userID.hashValue)
+                        let suffix = hash % 10000
+                        let name = names[hash % names.count]
+                        displayName = "\(name)\(suffix)"
+                    }
+                    
+                    // Create new user
+                    let randomAvatar = randomAvatars.randomElement() ?? "person.circle.fill"
+                    let newUser = User(
+                        username: displayName,
+                        bio: "Exploring the cosmos with Taya ✨",
+                        avatarName: randomAvatar
+                    )
+                    self.currentUser = newUser
+                    saveUser(newUser)
+                    // Also save under Apple ID key for future sign-ins
+                    if let data = try? JSONEncoder().encode(newUser) {
+                        UserDefaults.standard.set(data, forKey: userKey)
+                    }
+                }
+                
+                self.isLoggedIn = true
+                self.authError = nil
+                
+                // Generate conversations if needed
+                if self.conversations.isEmpty {
+                    generateNewConversations()
+                }
+                
+                // Welcome bonus for new users
+                if coinBalance == 0 {
+                    addCoins(10)
+                }
+            }
+        case .failure(let error):
+            // Don't show error if user cancelled
+            if (error as? ASAuthorizationError)?.code != .canceled {
+                self.authError = "Sign in failed. Please try again."
+            }
+            print("Apple Sign In error: \(error.localizedDescription)")
+        }
     }
     
+    /// Check if the Apple credential is still valid on app launch
+    private func checkAppleCredentialState() {
+        guard let userID = appleUserID else { return }
+        
+        let provider = ASAuthorizationAppleIDProvider()
+        provider.getCredentialState(forUserID: userID) { [weak self] state, _ in
+            DispatchQueue.main.async {
+                switch state {
+                case .authorized:
+                    break // Credential is still valid
+                case .revoked:
+                    // User explicitly revoked access — sign out
+                    self?.signOut()
+                case .notFound:
+                    // Can happen on simulator or if Apple servers are unreachable
+                    // Don't sign out — keep local session
+                    break
+                @unknown default:
+                    break
+                }
+            }
+        }
+    }
+    
+    /// Sign out — user can sign back in with the same Apple ID
+    func signOut() {
+        self.currentUser = nil
+        self.isLoggedIn = false
+        // Keep conversations, coins, blocked users, and appleUserID
+        // so they are restored when user signs back in
+        UserDefaults.standard.removeObject(forKey: "currentUser")
+    }
+    
+    /// Delete account — removes everything, user must create a new account
     func deleteAccount() {
         self.currentUser = nil
         self.isLoggedIn = false
         self.conversations = []
         self.blockedUserIds = []
         self.coinBalance = 0
+        self.appleUserID = nil
+        // Clear ALL data including Apple ID association
         UserDefaults.standard.removeObject(forKey: "currentUser")
         UserDefaults.standard.removeObject(forKey: "conversations")
         UserDefaults.standard.removeObject(forKey: "blockedUserIds")
         UserDefaults.standard.removeObject(forKey: "coinBalance")
+        UserDefaults.standard.removeObject(forKey: "appleUserID")
+    }
+    
+    func markConversationAsRead(user: User) {
+        if let index = conversations.firstIndex(where: { $0.user.id == user.id }) {
+            conversations[index].unreadCount = 0
+            saveConversations(conversations)
+        }
     }
     
     func blockUser(_ user: User) {

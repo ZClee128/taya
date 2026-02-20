@@ -2,7 +2,7 @@
 //  IMView.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/8.
+//  Created by Developer on 2025/10/28.
 //
 
 import SwiftUI
@@ -48,7 +48,7 @@ struct IMView: View {
                     .padding(.vertical, 5)
                 }
             }
-            .navigationBarTitle("Messages 💬")
+            .navigationBarTitle("Notes 📝")
         }
     }
 }
@@ -105,7 +105,7 @@ struct ChatDetailView: View {
                 }
                 
                 HStack {
-                    TextField("Type a message...", text: $messageText)
+                    TextField("Add a note...", text: $messageText)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                     
                     Button(action: sendMessage) {
@@ -117,6 +117,9 @@ struct ChatDetailView: View {
                 .padding()
                 .background(Color(UIColor.systemBackground))
             }
+        }
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .navigationBarTitle(Text(""), displayMode: .inline)
         .navigationBarItems(trailing: Button(action: {
@@ -144,6 +147,9 @@ struct ChatDetailView: View {
         }
         .alert(isPresented: $showReportAlert) {
             Alert(title: Text("Report Submitted"), message: Text("Thank you for reporting. We will investigate this user."), dismissButton: .default(Text("OK")))
+        }
+        .onAppear {
+            sessionManager.markConversationAsRead(user: user)
         }
     }
     

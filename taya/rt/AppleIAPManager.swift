@@ -12,16 +12,17 @@ enum ApplePayType {
 
 /// Payment status
 enum AppleIAPStatus: String {
-    case unknow            = "Unknown"
-    case createOrderFail   = "Order creation failed"
-    case notArrow          = "Device not allowed"
-    case noProductId       = "Missing product ID"
-    case failed            = "Transaction failed/cancelled"
-    case restored          = "Already purchased"
-    case deferred          = "Transaction deferred"
-    case verityFail        = "Server verification failed"
-    case veritySucceed     = "Server verification succeeded"
-    case renewSucceed      = "Auto-renewal succeeded"
+    case unknow            = "未知类型"
+    case createOrderFail   = "创建订单失败"
+    case notArrow          = "设备不允许"
+    case noProductId       = "缺少产品Id"
+    case failed            = "交易失败/取消"
+    case restored          = "已购买过该商品"
+    case deferred          = "交易延期"
+// optimized by lcdayoxhyd
+    case verityFail        = "服务器验证失败"
+    case veritySucceed     = "服务器验证成功"
+    case renewSucceed      = "自动续订成功"
 }
 
 typealias IAPcompletionHandle = (AppleIAPStatus, Double, ApplePayType) -> Void

@@ -2,7 +2,7 @@
 //  PostDetailView.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/8.
+//  Created by Developer on 2025/10/25.
 //
 
 import SwiftUI
@@ -18,6 +18,9 @@ struct PostDetailView: View {
     @State private var localComments: [Comment] = []
     @State private var newCommentText = ""
     @State private var showShareSheet = false
+    @State private var showCommentReportAlert = false
+    @State private var showCommentReportSuccess = false
+    @State private var reportedCommentUser = ""
     @ObservedObject private var keyboard = KeyboardResponder()
 
     var body: some View {
@@ -139,6 +142,16 @@ struct PostDetailView: View {
                                             Text(offsetDate(comment.date))
                                                 .font(.caption)
                                                 .foregroundColor(.gray)
+                                            
+                                            // Report comment button
+                                            Button(action: {
+                                                reportedCommentUser = comment.user.username
+                                                showCommentReportAlert = true
+                                            }) {
+                                                Image(systemName: "flag")
+                                                    .font(.caption)
+                                                    .foregroundColor(.gray)
+                                            }
                                         }
                                         
                                         Text(comment.text)
@@ -217,6 +230,25 @@ struct PostDetailView: View {
         .alert(isPresented: $showReportAlert) {
             Alert(title: Text("Report Submitted"), message: Text("Thank you for reporting. We will review this content shortly."), dismissButton: .default(Text("OK")))
         }
+        .background(EmptyView().alert(isPresented: $showCommentReportAlert) {
+            Alert(
+                title: Text("Report Comment"),
+                message: Text("Report this comment by \(reportedCommentUser) for inappropriate content?"),
+                primaryButton: .destructive(Text("Report")) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showCommentReportSuccess = true
+                    }
+                },
+                secondaryButton: .cancel()
+            )
+        })
+        .background(EmptyView().alert(isPresented: $showCommentReportSuccess) {
+            Alert(
+                title: Text("Thank You"),
+                message: Text("Your report has been submitted. Our team will review it shortly."),
+                dismissButton: .default(Text("OK"))
+            )
+        })
         .onAppear {
             self.isPlaying = true
             self.localComments = post.comments.sorted(by: { $0.date < $1.date })

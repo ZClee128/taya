@@ -2,10 +2,11 @@
 //  AgreementView.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/8.
+//  Created by Developer on 2025/10/14.
 //
 
 import SwiftUI
+import AuthenticationServices
 
 struct AgreementView: View {
     @ObservedObject var sessionManager: SessionManager
@@ -13,89 +14,153 @@ struct AgreementView: View {
     @State private var showPrivacy = false
     
     var body: some View {
-        VStack(spacing: 30) {
+        VStack(spacing: 0) {
             Spacer()
             
-            VStack(spacing: 15) {
-                Image(systemName: "hand.raised.fill")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 80, height: 80)
-                    .foregroundColor(.purple)
+            // App Branding
+            VStack(spacing: 16) {
+                // App Icon
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.purple,
+                                    Color.blue.opacity(0.8)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 100, height: 100)
+                    
+                    Image(systemName: "sparkles")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 50, height: 50)
+                        .foregroundColor(.white)
+                }
+                .shadow(color: Color.purple.opacity(0.4), radius: 15, x: 0, y: 8)
                 
-                Text("Welcome to Taya")
-                    .font(.largeTitle)
-                    .bold()
+                Text("Taya")
+                    .font(.system(size: 36, weight: .bold))
                 
-                Text("Connect with astronomy lovers around the world.")
-                    .font(.subheadline)
+                if #available(iOS 14.0, *) {
+                    Text("Your Astronomy Companion")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                } else {
+                    // Fallback on earlier versions
+                }
+                
+                Text("Learn about the cosmos through\nstunning visual observations.")
+                    .font(.body)
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                    .padding(.top, 4)
             }
             
             Spacer()
+            Spacer()
             
+            // Sign In Section
             VStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("By using Taya, you agree to our:")
+                // Sign in with Apple Button (native, following Apple HIG)
+                SignInWithAppleButton(
+                    type: .signIn,
+                    style: .black
+                ) {
+                    performAppleSignIn()
+                }
+                .frame(height: 50)
+                .cornerRadius(12)
+                .padding(.horizontal, 30)
+                
+                // Error message
+                if let error = sessionManager.authError {
+                    Text(error)
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                        .transition(.opacity)
+                }
+                
+                // Legal links
+                VStack(spacing: 8) {
+                    Text("By signing in, you agree to our")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                    HStack(spacing: 4) {
                         Button(action: { showTerms = true }) {
                             Text("Terms of Service")
-                                .font(.body)
-                                .foregroundColor(.primary)
+                                .font(.caption)
+                                .foregroundColor(.blue)
                                 .underline()
                         }
                         .sheet(isPresented: $showTerms) {
                             TermsView()
                         }
-                    }
-                    
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                        
+                        Text("and")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
                         Button(action: { showPrivacy = true }) {
                             Text("Privacy Policy")
-                                .font(.body)
-                                .foregroundColor(.primary)
+                                .font(.caption)
+                                .foregroundColor(.blue)
                                 .underline()
                         }
                         .sheet(isPresented: $showPrivacy) {
                             PrivacyView()
                         }
                     }
-                    
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        Text("Community Guidelines")
-                            .font(.body)
-                    }
                 }
-                .padding()
-                .background(Color.secondary.opacity(0.1))
-                .cornerRadius(10)
-                
-                Button(action: {
-                    sessionManager.createAccount()
-                }) {
-                    Text("Agree & Enter")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.purple)
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal)
+                .padding(.top, 8)
             }
             .padding(.bottom, 50)
         }
+        .background(Color(UIColor.systemBackground))
+        .edgesIgnoringSafeArea(.all)
+    }
+    
+    // MARK: - Apple Sign In
+    
+    private func performAppleSignIn() {
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        let coordinator = AppleSignInCoordinator(sessionManager: sessionManager)
+        controller.delegate = coordinator
+        
+        // Store coordinator to prevent deallocation
+        AppleSignInCoordinator.current = coordinator
+        
+        controller.performRequests()
+    }
+}
+
+/// Coordinator to handle ASAuthorizationController delegate callbacks
+class AppleSignInCoordinator: NSObject, ASAuthorizationControllerDelegate {
+    static var current: AppleSignInCoordinator?
+    
+    let sessionManager: SessionManager
+    
+    init(sessionManager: SessionManager) {
+        self.sessionManager = sessionManager
+    }
+    
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        sessionManager.handleAppleSignIn(result: .success(authorization))
+        AppleSignInCoordinator.current = nil
+    }
+    
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        sessionManager.handleAppleSignIn(result: .failure(error))
+        AppleSignInCoordinator.current = nil
     }
 }
 

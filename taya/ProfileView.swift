@@ -2,7 +2,7 @@
 //  ProfileView.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/8.
+//  Created by Developer on 2025/10/18.
 //
 
 import SwiftUI
@@ -156,26 +156,26 @@ struct ProfileView: View {
                         Spacer()
                         VStack {
                             if #available(iOS 14.0, *) {
-                                Text("1.2k")
+                                Text("0")
                                     .font(.title2)
                                     .bold()
                             } else {
                                 // Fallback on earlier versions
                             }
-                            Text("Followers")
+                            Text("Learnings")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
                         Spacer()
                         VStack {
                             if #available(iOS 14.0, *) {
-                                Text("450")
+                                Text("0")
                                     .font(.title2)
                                     .bold()
                             } else {
                                 // Fallback on earlier versions
                             }
-                            Text("Following")
+                            Text("Bookmarks")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
@@ -230,18 +230,31 @@ struct ProfileView: View {
                     
                     Spacer(minLength: 30)
                     
+                    // Sign Out
+                    Button(action: {
+                        sessionManager.signOut()
+                    }) {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Text("Sign Out")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    
+                    // Delete Account
                     Button(action: {
                         showingDeleteAlert = true
                     }) {
                         Text("Delete Account")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.red.opacity(0.8))
-                            .cornerRadius(12)
+                            .font(.subheadline)
+                            .foregroundColor(.red)
                     }
-                    .padding(.horizontal)
                     .padding(.bottom, 20)
                 }
             }

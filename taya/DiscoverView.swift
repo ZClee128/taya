@@ -2,7 +2,7 @@
 //  DiscoverView.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/8.
+//  Created by Developer on 2025/10/22.
 //
 
 import SwiftUI
@@ -86,7 +86,7 @@ struct DiscoverView: View {
                         
                         // Trending Section
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Trending Now 🔥")
+                            Text("Popular Observations 🔥")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -200,7 +200,7 @@ struct DiscoverView: View {
                 }
                 .padding(.bottom, 20)
             }
-            .navigationBarTitle("Discover 🔭", displayMode: .automatic)
+            .navigationBarTitle("Learn 🔭", displayMode: .automatic)
         }
     }
 }

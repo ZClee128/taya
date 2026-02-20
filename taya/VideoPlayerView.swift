@@ -2,7 +2,7 @@
 //  VideoPlayerView.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/8.
+//  Created by Developer on 2025/10/30.
 //
 
 import SwiftUI

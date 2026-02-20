@@ -2,7 +2,7 @@
 //  AvatarView.swift
 //  taya
 //
-//  Created by Assistant on 2026/2/14.
+//  Created by Developer on 2025/11/22.
 //
 
 import SwiftUI

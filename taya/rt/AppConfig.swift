@@ -2,7 +2,7 @@
 //  AppConfig.swift
 //  taya
 //
-//  Created by young on 2025/9/24.
+//  Created by Developer on 2025/9/24.
 //
 
 import KeychainSwift
