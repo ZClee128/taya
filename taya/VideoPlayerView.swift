@@ -1,36 +1,85 @@
-//
-//  VideoPlayerView.swift
-//  taya
-//
-//  Created by Developer on 2025/10/30.
-//
-
 import SwiftUI
 import AVKit
 
-struct VideoPlayerView: UIViewRepresentable {
-    let videoName: String
-    @Binding var isPlaying: Bool
-    
-    func makeUIView(context: Context) -> UIView {
-        let view = PlayerUIView(frame: .zero)
-        view.backgroundColor = .black
-        context.coordinator.setup(in: view, videoName: videoName)
-        return view
+/// A custom AVPlayerViewController that prevents the system from pausing the video
+/// when the app enters the background by detaching the player from the view.
+class BackgroundPlayerViewController: AVPlayerViewController {
+    var storedPlayer: AVPlayer?
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.showsPlaybackControls = false
+        self.videoGravity = .resizeAspectFill
+        
+        // Listen for backgrounding to detach player
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        // Listen for foregrounding to reattach player
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
     }
     
-    func updateUIView(_ uiView: UIView, context: Context) {
-        if !isPlaying {
-            context.coordinator.player?.pause()
-        } else {
-            if context.coordinator.player?.rate == 0 && context.coordinator.player?.error == nil {
-                context.coordinator.player?.play()
-            }
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func appDidEnterBackground() {
+        storedPlayer = self.player
+        self.player = nil // Detach so system doesn't pause it
+    }
+    
+    @objc private func appWillEnterForeground() {
+        if let p = storedPlayer {
+            self.player = p
+            p.play()
         }
     }
-    
-    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
-        coordinator.cleanup()
+}
+
+/// A view that plays a video in a continuous loop using AVQueuePlayer and AVPlayerLooper.
+/// It also handles app lifecycle events to ensure playback continues or resumes correctly.
+struct VideoPlayerView: UIViewControllerRepresentable {
+    let videoName: String
+
+    func makeUIViewController(context: Context) -> BackgroundPlayerViewController {
+        let controller = BackgroundPlayerViewController()
+        controller.videoGravity = .resizeAspectFill
+
+        let url = getVideoURL(for: videoName)
+        let playerItem = AVPlayerItem(url: url)
+        
+        // Use AVQueuePlayer and AVPlayerLooper for seamless looping
+        let queuePlayer = AVQueuePlayer(playerItem: playerItem)
+        let looper = AVPlayerLooper(player: queuePlayer, templateItem: playerItem)
+        
+        // Store the looper and player in the context coordinator to keep them alive
+        context.coordinator.looper = looper
+        context.coordinator.player = queuePlayer
+        
+        controller.player = queuePlayer
+        queuePlayer.play()
+
+        // Configure audio session for background playback
+        // MUST NOT use .mixWithOthers if we want to hold background playback authority
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        try? AVAudioSession.sharedInstance().setActive(true)
+
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: BackgroundPlayerViewController, context: Context) {
+        // Ensure it stays playing
+        if uiViewController.player?.timeControlStatus != .playing {
+            uiViewController.player?.play()
+        }
     }
     
     func makeCoordinator() -> Coordinator {
@@ -38,88 +87,21 @@ struct VideoPlayerView: UIViewRepresentable {
     }
     
     class Coordinator: NSObject {
-        var player: AVPlayer?
-        weak var playerLayer: AVPlayerLayer?
-        
-        func cleanup() {
-            NotificationCenter.default.removeObserver(self)
-            player?.pause()
-            player?.replaceCurrentItem(with: nil)
-            playerLayer?.player = nil
-            player = nil
-        }
-        
-        func setup(in view: UIView, videoName: String) {
-            guard let layer = view.layer as? AVPlayerLayer else { return }
-            self.playerLayer = layer
-            
-            var videoURL: URL?
-            if let url = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
-                videoURL = url
-            } else if let path = Bundle.main.path(forResource: videoName, ofType: "mp4") {
-                videoURL = URL(fileURLWithPath: path)
-            }
-            
-            if let url = videoURL {
-                let player = AVPlayer(url: url)
-                player.actionAtItemEnd = .none
-                self.player = player
-                
-                layer.player = player
-                layer.videoGravity = .resizeAspect
-                
-                NotificationCenter.default.addObserver(
-                    self,
-                    selector: #selector(playerItemDidReachEnd(notification:)),
-                    name: .AVPlayerItemDidPlayToEndTime,
-                    object: player.currentItem
-                )
-                
-                NotificationCenter.default.addObserver(
-                    self,
-                    selector: #selector(appDidEnterBackground),
-                    name: UIApplication.didEnterBackgroundNotification,
-                    object: nil
-                )
-                
-                NotificationCenter.default.addObserver(
-                    self,
-                    selector: #selector(appWillEnterForeground),
-                    name: UIApplication.willEnterForegroundNotification,
-                    object: nil
-                )
-                
-                player.play()
-            }
-        }
-        
-        @objc func playerItemDidReachEnd(notification: Notification) {
-            player?.seek(to: .zero)
-            player?.play()
-        }
-        
-        @objc func appDidEnterBackground() {
-            playerLayer?.player = nil
-        }
-        
-        @objc func appWillEnterForeground() {
-            playerLayer?.player = player
-            player?.play()
-        }
-        
-        deinit {
-            cleanup()
-        }
+        var looper: AVPlayerLooper?
+        var player: AVQueuePlayer?
     }
-    
-    class PlayerUIView: UIView {
-        override static var layerClass: AnyClass {
-            return AVPlayerLayer.self
+
+    private func getVideoURL(for name: String) -> URL {
+        if let path = Bundle.main.path(forResource: name, ofType: "mp4") {
+            return URL(fileURLWithPath: path)
         }
         
-        override func layoutSubviews() {
-            super.layoutSubviews()
-            layer.frame = bounds
-        }
+        // Sample videos fallback
+        let sampleURLs: [String: String] = [
+            "sky": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            "star": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
+        ]
+        let urlStr = sampleURLs[name] ?? "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
+        return URL(string: urlStr)!
     }
 }

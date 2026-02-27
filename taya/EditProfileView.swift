@@ -1,64 +1,57 @@
-//
-//  EditProfileView.swift
-//  taya
-//
-//  Created by Developer on 2025/11/8.
-//
-
 import SwiftUI
 
+/// Profile editor view for updating display name and bio.
 struct EditProfileView: View {
     @ObservedObject var sessionManager: SessionManager
+    @State private var name: String = ""
+    @State private var bio: String = ""
     @Environment(\.presentationMode) var presentationMode
-    
-    @State private var username: String
-    @State private var bio: String
-    
-    init(sessionManager: SessionManager) {
-        self.sessionManager = sessionManager
-        _username = State(initialValue: sessionManager.currentUser?.username ?? "")
-        _bio = State(initialValue: sessionManager.currentUser?.bio ?? "")
-    }
-    
+
+    private let accentGreen = Color(red: 0.36, green: 0.72, blue: 0.66)
+
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Public Info")) {
-                    TextField("Username", text: $username)
-                    TextField("Bio", text: $bio)
-                }
-                
-                Section {
-                    Button(action: saveProfile) {
-                        Text("Save Changes")
-                            .foregroundColor(.blue)
+                Section(header: Text("Profile Photo")) {
+                    HStack {
+                        Spacer()
+                        ZStack {
+                            Circle()
+                                .fill(accentGreen.opacity(0.15))
+                                .frame(width: 80, height: 80)
+                            Image(systemName: sessionManager.currentUser.avatarIcon)
+                                .font(.system(size: 36))
+                                .foregroundColor(accentGreen)
+                        }
+                        Spacer()
                     }
                 }
+
+                Section(header: Text("Display Name")) {
+                    TextField("Your name", text: $name)
+                }
+
+                Section(header: Text("Bio")) {
+                    TextField("Your bio", text: $bio)
+                }
             }
-            .navigationBarTitle("Edit Profile", displayMode: .inline)
-            .navigationBarItems(leading: Button("Cancel") {
-                presentationMode.wrappedValue.dismiss()
-            })
+            .navigationBarTitle("Edit Profile")
+            .navigationBarItems(
+                leading: Button("Cancel") { presentationMode.wrappedValue.dismiss() },
+                trailing: Button(action: {
+                    sessionManager.updateProfile(name: name, bio: bio)
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    Text("Save")
+                        .bold()
+                        .foregroundColor(accentGreen)
+                }
+            )
         }
-    }
-    
-    func saveProfile() {
-        // Deduct coins here
-        if sessionManager.spendCoins(32) {
-            guard var user = sessionManager.currentUser else { return }
-            user.username = username
-            user.bio = bio
-            sessionManager.currentUser = user
-            // Force save
-            if let data = try? JSONEncoder().encode(user) {
-                UserDefaults.standard.set(data, forKey: "currentUser")
-            }
-            presentationMode.wrappedValue.dismiss()
-        } else {
-            // Should not happen if pre-checked, but good safety
-             // In iOS 13 simple alert is hard from function without state, 
-             // but we can just ignore or print as this flow is gated by ProfileView check.
-             print("Insufficient coins to save")
+        .navigationViewStyle(StackNavigationViewStyle())
+        .onAppear {
+            name = sessionManager.currentUser.displayName
+            bio = sessionManager.currentUser.bio
         }
     }
 }

@@ -1,60 +1,94 @@
 import UIKit
 import Alamofire
-import CoreMedia
 import HandyJSON
- 
-typealias FinishBlock = (_ succeed: Bool, _ result: Any?, _ errorModel: AppErrorResponse?) -> Void
- 
-@objc class AppRequestTool: NSObject {
-    /// Start POST request
-    class func startPostRequest(model: AppRequestModel, completion: @escaping FinishBlock) {
-        let serverUrl = self.buildServerUrl(model: model)
-        let headers = self.getRequestHeader(model: model)
-        AF.request(serverUrl, method: .post, parameters: model.params, headers: headers, requestModifier: { $0.timeoutInterval = 10.0 }).responseData { [self] responseData in
-            switch responseData.result {
-            case .success:
-                func__requestSucess(model: model, response: responseData.response!, responseData: responseData.data!, completion: completion)
-                
-            case .failure:
-                completion(false, nil, AppErrorResponse.init(errorCode: RequestResultCode.NetError.rawValue, errorMsg: "Net Error, Try again later"))
-            }
-        }
-    }
-    
-    class func func__requestSucess(model: AppRequestModel, response: HTTPURLResponse, responseData: Data, completion: @escaping FinishBlock) {
-        var responseJson = String(data: responseData, encoding: .utf8)
-        responseJson = responseJson?.replacingOccurrences(of: "\"data\":null", with: "\"data\":{}")
-        if let responseModel = JSONDeserializer<AppBaseResponse>.deserializeFrom(json: responseJson) {
-            if responseModel.errno == RequestResultCode.Normal.rawValue {
-                completion(true, responseModel.data, nil)
-            } else {
-                completion(false, responseModel.data, AppErrorResponse.init(errorCode: responseModel.errno, errorMsg: responseModel.msg ?? ""))
-                switch responseModel.errno {
-                default:
-                    break
+
+/// Completion handler for network requests.
+typealias FinishBlock = (_ succeed: Bool, _ result: Any?, _ error: APIError?) -> Void
+
+/// Handles outgoing HTTP requests to the backend API.
+/// Builds URLs with standard query parameters and processes JSON responses.
+enum NetworkClient {
+
+    /// Sends a POST request using the given configuration.
+    static func post(request model: NetworkRequest, completion: @escaping FinishBlock) {
+        let url = buildURL(for: model)
+        let headers = buildHeaders(for: model)
+
+        AF.request(url,
+                   method: .post,
+                   parameters: model.parameters,
+                   headers: headers,
+                   requestModifier: { $0.timeoutInterval = 10.0 }
+        ).responseData { response in
+            switch response.result {
+            case .success(let data):
+                guard let httpResponse = response.response else {
+                    completion(false, nil, APIError(code: APIResultCode.networkErr.rawValue, message: "No HTTP response"))
+                    return
                 }
+                handleSuccess(model: model, httpResponse: httpResponse, body: data, completion: completion)
+
+            case .failure:
+                completion(false, nil, APIError(code: APIResultCode.networkErr.rawValue, message: "Network error, please try again"))
             }
+        }
+    }
+
+    // MARK: - Internal
+
+    private static func handleSuccess(model: NetworkRequest, httpResponse: HTTPURLResponse, body: Data, completion: @escaping FinishBlock) {
+        var json = String(data: body, encoding: .utf8) ?? ""
+        json = json.replacingOccurrences(of: "\"data\":null", with: "\"data\":{}")
+
+        guard let envelope = JSONDeserializer<APIResponse>.deserializeFrom(json: json) else {
+            completion(false, nil, APIError(code: APIResultCode.networkErr.rawValue, message: "JSON parse error"))
+            return
+        }
+
+        if envelope.errno == APIResultCode.success.rawValue {
+            completion(true, envelope.data, nil)
         } else {
-            completion(false, nil, AppErrorResponse.init(errorCode: RequestResultCode.NetError.rawValue, errorMsg: "json error"))
+            completion(false, envelope.data, APIError(code: envelope.errno, message: envelope.msg ?? ""))
         }
-                
     }
-    
+
+    private static func buildURL(for model: NetworkRequest) -> String {
+        var url = model.baseURL
+        if !model.endpoint.isEmpty {
+            url += "/\(model.endpoint)"
+        }
+        let query = "platform=iphone&version=\(AppNetVersion)&packageId=\(AppInternalIdentifier)&bundleId=\(AppBundle)&lang=\(UIDevice.interfaceLang)"
+        url += "?\(query)"
+        return url
+    }
+
+    private static func buildHeaders(for model: NetworkRequest) -> HTTPHeaders {
+        let ua = "\(AppName)/\(AppVersion) (\(AppBundle); build:\(AppBuildNumber); iOS \(UIDevice.current.systemVersion); \(UIDevice.modelName))"
+        return HTTPHeaders([.userAgent(ua)])
+    }
+}
+
+// MARK: - Legacy Compatibility
+
+/// Preserves existing call sites that use `AppRequestTool.startPostRequest(...)`.
+@objc class AppRequestTool: NSObject {
+    class func startPostRequest(model: AppRequestModel, completion: @escaping FinishBlock) {
+        NetworkClient.post(request: model, completion: completion)
+    }
+
     class func buildServerUrl(model: AppRequestModel) -> String {
-        var serverUrl: String = model.requestServer
-        let otherParams = "platform=iphone&version=\(AppNetVersion)&packageId=\(PackageID)&bundleId=\(AppBundle)&lang=\(UIDevice.interfaceLang)"
-        if !model.requestPath.isEmpty {
-            serverUrl.append("/\(model.requestPath)")
+        // Kept for any external references
+        var url = model.baseURL
+        let query = "platform=iphone&version=\(AppNetVersion)&packageId=\(AppInternalIdentifier)&bundleId=\(AppBundle)&lang=\(UIDevice.interfaceLang)"
+        if !model.endpoint.isEmpty {
+            url += "/\(model.endpoint)"
         }
-        serverUrl.append("?\(otherParams)")
-        
-        return serverUrl
+        url += "?\(query)"
+        return url
     }
-    
-    /// Build request headers
+
     class func getRequestHeader(model: AppRequestModel) -> HTTPHeaders {
-        let userAgent = "\(AppName)/\(AppVersion) (\(AppBundle); build:\(AppBuildNumber); iOS \(UIDevice.current.systemVersion); \(UIDevice.modelName))"
-        let headers = [HTTPHeader.userAgent(userAgent)]
-        return HTTPHeaders(headers)
+        let ua = "\(AppName)/\(AppVersion) (\(AppBundle); build:\(AppBuildNumber); iOS \(UIDevice.current.systemVersion); \(UIDevice.modelName))"
+        return HTTPHeaders([.userAgent(ua)])
     }
 }

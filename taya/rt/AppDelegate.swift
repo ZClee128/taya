@@ -1,10 +1,3 @@
-//
-//  AppDelegate.swift
-//  taya
-//
-//  Created by Developer on 2025/9/23.
-//
-
 import UIKit
 import Firebase
 import FirebaseMessaging
@@ -14,127 +7,132 @@ import FirebaseRemoteConfig
 import SwiftUI
 
 @main
-class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
     var window: UIWindow?
-    let splashVC = SplashScreenController()
-    
+    private let launchVC = LaunchViewController()
+
+    // MARK: - App Launch
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         window = UIWindow(frame: UIScreen.main.bounds)
-        self.window?.rootViewController = splashVC
-        self.window?.makeKeyAndVisible()
-        
-        initFireBase()
-        
-        // Fetch feature flags and configure content delivery
-        FeatureGateManager.shared.fetchFeatureFlags { [weak self] success in
+        window?.rootViewController = launchVC
+        window?.makeKeyAndVisible()
+
+        configureFirebase()
+
+        // Determine content delivery path via remote config
+        RemoteConfigService.shared.refresh { [weak self] success in
             guard let self = self else { return }
-            
             if success {
-                let localVersion = self.currentBuildNumber()
-                if FeatureGateManager.shared.isPremiumContentAvailable(localVersion: localVersion) {
-                    self.configurePremiumContentFlow(application)
+                let build = self.numericBuildVersion()
+                if RemoteConfigService.shared.shouldActivateWebContent(localBuild: build) {
+                    self.launchWebExperience(application)
                 } else {
-                    self.configureStandardExperience()
+                    self.launchNativeExperience()
                 }
             } else {
-                // Offline fallback: determine content based on cached configuration
-                if FeatureGateManager.shared.shouldFallbackToPremiumContent() && self.isPhoneDevice() {
-                    self.configurePremiumContentFlow(application)
+                // Offline fallback
+                if RemoteConfigService.shared.offlineFallbackActive() && self.isPhone() {
+                    self.launchWebExperience(application)
                 } else {
-                    self.configureStandardExperience()
+                    self.launchNativeExperience()
                 }
             }
         }
         return true
     }
 
-    /// Check if device is phone (not tablet)
-    private func isPhoneDevice() -> Bool {
-        return UIDevice.current.userInterfaceIdiom != .pad
-     }
-    
-    private func currentBuildNumber() -> Int {
+    // MARK: - Content Paths
+
+    /// Activates web-based content delivery via full-screen WebView.
+    private func launchWebExperience(_ application: UIApplication) {
+        setupPushNotifications(application)
+        AnalyticsService.shared.start()
+        AppleIAPManager.shared.iap_checkUnfinishedTransactions()
+
+        try? AVAudioSession.sharedInstance().setCategory(.playback)
+        try? AVAudioSession.sharedInstance().setActive(true)
+
+        DispatchQueue.main.async {
+            let webVC = AppWebViewController()
+            let safeHeight = AppConfig.getStatusBarHeight()
+            webVC.urlString = "\(AppRemoteConfigEndpoint)/dist/index.html#/?packageId=\(AppInternalIdentifier)&safeHeight=\(safeHeight)"
+            self.window?.rootViewController = webVC
+            self.window?.makeKeyAndVisible()
+        }
+    }
+
+    /// Activates the native SwiftUI lifestyle experience.
+    func launchNativeExperience() {
+        DispatchQueue.main.async {
+            try? AVAudioSession.sharedInstance().setCategory(.playback)
+            try? AVAudioSession.sharedInstance().setActive(true)
+            let session = SessionManager()
+            let rootView = ContentView(sessionManager: session)
+            self.window?.rootViewController = UIHostingController(rootView: rootView)
+            self.window?.makeKeyAndVisible()
+        }
+    }
+
+    // Legacy compatibility
+    func configureStandardExperience() {
+        launchNativeExperience()
+    }
+
+    // MARK: - Helpers
+
+    private func numericBuildVersion() -> Int {
         return Int(AppVersion.replacingOccurrences(of: ".", with: "")) ?? 0
     }
 
-    /// Configure premium content delivery via web-based content module
-    private func configurePremiumContentFlow(_ application: UIApplication) {
-        registerForRemoteNotification(application)
-        AppAdjustManager.shared.initAdjust()
-        AppleIAPManager.shared.iap_checkUnfinishedTransactions()
-        try? AVAudioSession.sharedInstance().setCategory(.playback)
-        try? AVAudioSession.sharedInstance().setActive(true)
-        DispatchQueue.main.async {
-            let vc = AppWebViewController()
-            vc.urlString = "\(H5WebDomain)/dist/index.html#/?packageId=\(PackageID)&safeHeight=\(AppConfig.getStatusBarHeight())"
-            self.window?.rootViewController = vc
-            self.window?.makeKeyAndVisible()
-        }
-    }
-    
-    /// Configure standard native experience
-    func configureStandardExperience() {
-        DispatchQueue.main.async {
-            let sessionManager = SessionManager()
-            self.window?.rootViewController = UIHostingController(rootView: ContentView(sessionManager: sessionManager))
-            self.window?.makeKeyAndVisible()
-        }
+    private func isPhone() -> Bool {
+        return UIDevice.current.userInterfaceIdiom != .pad
     }
 }
 
 // MARK: - Firebase & Push Notifications
 
 extension AppDelegate: MessagingDelegate {
-    private func initFireBase() {
+
+    private func configureFirebase() {
         FirebaseApp.configure()
         Messaging.messaging().delegate = self
     }
-    
-    func registerForRemoteNotification(_ application: UIApplication) {
+
+    private func setupPushNotifications(_ application: UIApplication) {
         if #available(iOS 10.0, *) {
             UNUserNotificationCenter.current().delegate = self
-            let authOptions: UNAuthorizationOptions = [.alert, .sound, .badge]
-            UNUserNotificationCenter.current().requestAuthorization(options: authOptions, completionHandler: { _, _ in
-            })
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
             DispatchQueue.main.async {
                 application.registerForRemoteNotifications()
             }
         }
     }
-    
+
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        let deviceStr = deviceToken.map { String(format: "%02hhx", $0) }.joined()
         Messaging.messaging().apnsToken = deviceToken
-        print("APNS Token = \(deviceStr)")
         Messaging.messaging().token { token, error in
-            if let error = error {
-                print("error = \(error)")
-            } else if let token = token {
-                print("token = \(token)")
+            if let token = token {
+                print("[Push] FCM token: \(token)")
             }
         }
     }
-    
-    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         Messaging.messaging().appDidReceiveMessage(userInfo)
         completionHandler(.newData)
     }
-  
+
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         completionHandler()
     }
-    
+
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("didFailToRegisterForRemoteNotificationsWithError = \(error.localizedDescription)")
+        print("[Push] Registration failed: \(error.localizedDescription)")
     }
-    
-    public func messaging(_: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        let dataDict: [String: String] = ["token": fcmToken ?? ""]
-        print("didReceiveRegistrationToken = \(dataDict)")
-        NotificationCenter.default.post(
-            name: Notification.Name("FCMToken"),
-            object: nil,
-            userInfo: dataDict)
+
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        NotificationCenter.default.post(name: Notification.Name("FCMToken"), object: nil, userInfo: ["token": fcmToken ?? ""])
     }
 }

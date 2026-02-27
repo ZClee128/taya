@@ -1,144 +1,216 @@
-//
-//  StoreView.swift
-//  taya
-//
-//  Created by Developer on 2025/11/3.
-//
-
 import SwiftUI
+import StoreKit
 
+/// Store page — coin purchase with real StoreKit IAP flow.
+/// Shows coin balance, product list, and handles purchase via StoreManager.
 struct StoreView: View {
     @ObservedObject var sessionManager: SessionManager
-    @ObservedObject var storeManager = StoreManager()
+    @ObservedObject var storeManager = StoreManager.shared
     @Environment(\.presentationMode) var presentationMode
-    
-    // Grid Setup
-    let columns = 3
-    
+    @State private var showResult = false
+    @State private var resultMessage = ""
+
+    private let accentGreen = Color(red: 0.36, green: 0.72, blue: 0.66)
+    private let goldColor = Color(red: 1.0, green: 0.78, blue: 0.18)
+
+    // Display-only info (prices from App Store Connect)
+    private let displayPackages: [(id: String, price: String, coins: Int, bonus: Int)] = [
+        ("Taya",   "$0.99",  32,   0),
+        ("Taya1",  "$1.99",  60,   0),
+        ("Taya2",  "$2.99",  96,   0),
+        ("Taya4",  "$4.99",  155,  0),
+        ("Taya6",  "$5.99",  189,  0),
+        ("Taya9",  "$9.99",  299,  60),
+        ("Taya19", "$19.99", 599,  130),
+        ("Taya49", "$49.99", 1599, 270),
+        ("Taya99", "$99.99", 3199, 600),
+    ]
+
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Header Balance
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("My Balance")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                        HStack {
-                            Image(systemName: "dollarsign.circle.fill")
-                                .foregroundColor(.yellow)
-                            Text("\(sessionManager.coinBalance)")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundColor(.primary)
-                        }
-                    }
-                    Spacer()
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 20) {
+                    balanceSection
+                    coinListSection
+                    restoreSection
                 }
-                .padding()
-                .background(Color(UIColor.secondarySystemBackground))
-                
-                Divider()
-
-                // Product Grid (Simulating Grid for iOS 13 using VStack/HStack)
-                ScrollView {
-                    VStack(spacing: 15) {
-                        ForEach(gridRows(products: storeManager.displayProducts), id: \.self) { rowProducts in
-                            HStack(spacing: 15) {
-                                ForEach(rowProducts) { product in
-                                    Button(action: {
-                                        storeManager.purchaseProduct(mockProduct: product)
-                                    }) {
-                                        VStack(spacing: 8) {
-                                            Text(product.title)
-                                                .font(.headline)
-                                                .foregroundColor(.primary)
-                                                .multilineTextAlignment(.center)
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.8)
-                                            
-                                            if !product.description.isEmpty {
-                                                Text(product.description)
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                                    .multilineTextAlignment(.center)
-                                                    .lineLimit(2)
-                                                    .frame(height: 30) // Fixed height for alignment
-                                            }
-                                            
-                                            Text(product.price)
-                                                .font(.subheadline)
-                                                .bold()
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 6)
-                                                .background(Color.blue)
-                                                .cornerRadius(15)
-                                        }
-                                        .padding()
-                                        .frame(maxWidth: .infinity)
-                                        .background(Color(UIColor.systemBackground))
-                                        .cornerRadius(12)
-                                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                                    }
-                                }
-                                // Fill empty spaces
-                                ForEach(0..<(columns - rowProducts.count), id: \.self) { _ in
-                                    Color.clear.frame(maxWidth: .infinity)
-                                }
-                            }
-                        }
-                    }
-                    .padding()
-                }
+                .padding(.bottom, 40)
             }
-            .navigationBarTitle("Store 🛒", displayMode: .inline)
+            .background(Color(UIColor.systemGroupedBackground))
+            .navigationBarTitle("Store")
             .navigationBarItems(trailing: Button("Done") {
                 presentationMode.wrappedValue.dismiss()
             })
-            .disabled(storeManager.isLoading)
-            .onAppear {
-                // Bind Callbacks
-                storeManager.onPurchaseSuccess = { coins in
-                    sessionManager.addCoins(coins)
-                }
-                // Failure needs no action besides stopping loading (handled in manager)
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+        .onAppear {
+            storeManager.loadProducts()
+        }
+        .alert(isPresented: $showResult) {
+            Alert(title: Text(resultMessage), dismissButton: .default(Text("OK")))
+        }
+        .onReceive(storeManager.$purchaseMessage) { msg in
+            if let msg = msg, !msg.isEmpty {
+                resultMessage = msg
+                showResult = true
+                storeManager.purchaseMessage = nil
             }
-            .overlay(
-                Group {
-                    if storeManager.isLoading {
-                        Color.black.opacity(0.4).edgesIgnoringSafeArea(.all)
-                        VStack {
-                            Text("Processing...")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                        }
-                        .padding()
-                        .background(Color.black)
-                        .cornerRadius(10)
+        }
+    }
+
+    // MARK: - Balance
+
+    private var balanceSection: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "bitcoinsign.circle.fill")
+                .font(.system(size: 44))
+                .foregroundColor(goldColor)
+                .padding(.top, 16)
+            Text("\(storeManager.coinBalance)")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+            Text("coins")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(14)
+        .padding(.horizontal)
+    }
+
+    // MARK: - Coin List
+
+    private var coinListSection: some View {
+        VStack(spacing: 10) {
+            Text("Get Coins")
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+
+            ForEach(displayPackages, id: \.id) { pkg in
+                coinRow(pkg)
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private func coinRow(_ pkg: (id: String, price: String, coins: Int, bonus: Int)) -> some View {
+        let totalCoins = pkg.coins + pkg.bonus
+
+        return Button(action: {
+            purchaseProduct(pkg.id)
+        }) {
+            HStack(spacing: 12) {
+                // Coin icon
+                ZStack {
+                    Circle()
+                        .fill(goldColor.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(goldColor)
+                }
+
+                // Coin info
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("\(totalCoins)")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        Text("coins")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    if pkg.bonus > 0 {
+                        Text("\(pkg.coins) + \(pkg.bonus) bonus")
+                            .font(.caption)
+                            .foregroundColor(.orange)
                     }
                 }
-            )
+
+                Spacer()
+
+                // HOT badge
+                if pkg.id == "Taya9" || pkg.id == "Taya19" {
+                    Text("HOT")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.red)
+                        .cornerRadius(4)
+                }
+
+                // Price from App Store if loaded, otherwise fallback
+                Text(priceForProduct(pkg.id) ?? pkg.price)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(accentGreen)
+                    .cornerRadius(20)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .cornerRadius(12)
         }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(storeManager.isPurchasing)
+        .opacity(storeManager.isPurchasing ? 0.6 : 1.0)
     }
-    
-    // Helper for Mock Product Grid
-    func gridRows(products: [StoreManager.MockProduct]) -> [[StoreManager.MockProduct]] {
-        var rows: [[StoreManager.MockProduct]] = []
-        for i in stride(from: 0, to: products.count, by: columns) {
-            var row: [StoreManager.MockProduct] = []
-            for j in 0..<columns {
-                if i + j < products.count {
-                    row.append(products[i + j])
+
+    // MARK: - Restore
+
+    private var restoreSection: some View {
+        VStack(spacing: 8) {
+            if storeManager.isPurchasing {
+                HStack {
+                    Spacer()
+                    Text("Processing purchase...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
                 }
             }
-            rows.append(row)
-        }
-        return rows
-    }
-}
 
-struct StoreView_Previews: PreviewProvider {
-    static var previews: some View {
-        StoreView(sessionManager: SessionManager())
+            Button(action: {
+                storeManager.restorePurchases()
+            }) {
+                Text("Restore Purchases")
+                    .font(.caption)
+                    .foregroundColor(accentGreen)
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// Get localized price string from loaded SKProducts
+    private func priceForProduct(_ productId: String) -> String? {
+        guard let product = storeManager.products.first(where: { $0.productIdentifier == productId }) else {
+            return nil
+        }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = product.priceLocale
+        return formatter.string(from: product.price)
+    }
+
+    private func purchaseProduct(_ productId: String) {
+        ProgressHUD.show()
+        storeManager.purchase(productId: productId) { success, message in
+            ProgressHUD.dismiss()
+            if !message.isEmpty {
+                self.resultMessage = message
+                self.showResult = true
+            }
+        }
     }
 }

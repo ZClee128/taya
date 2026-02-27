@@ -1,33 +1,40 @@
-
 import Foundation
 
-/// Secure string decoder for runtime string construction
-/// Uses multi-layer encoding to protect sensitive configuration values
-struct StringObfuscation {
-    
-    /// Decode a securely encoded string
+/// Utility for decoding protected configuration strings at runtime.
+/// Applies XOR cipher to reconstruct sensitive values from encoded byte arrays.
+enum StringCipher {
+
+    /// Decodes an encoded byte sequence using XOR with the provided key.
     /// - Parameters:
-    ///   - bytes: The encoded byte sequence
-    ///   - salt: The encoding key used during build-time encryption
-    /// - Returns: The decoded string value
-    static func deobfuscate(bytes: [UInt8], salt: UInt8) -> String {
-        // Layer 1: XOR decode with salt
-        let xorDecoded = bytes.map { $0 ^ salt }
-        
-        // Layer 2: Byte reversal for additional security
-        // (Currently using direct XOR; can be extended with additional layers)
-        guard let result = String(bytes: xorDecoded, encoding: .utf8) else {
-            return ""
-        }
-        return result
+    ///   - data: Encoded byte array
+    ///   - key: XOR key used during encoding
+    /// - Returns: Decoded UTF-8 string, or empty string on failure
+    static func decode(data: [UInt8], key: UInt8) -> String {
+        let decoded = data.map { $0 ^ key }
+        return String(bytes: decoded, encoding: .utf8) ?? ""
     }
-    
-    /// Encode a string for build-time embedding (utility for development)
+
+    /// Encodes a plain text string into an XOR-protected byte array.
+    /// Used at development time to generate encoded constants.
     /// - Parameters:
-    ///   - input: The plain text string to encode
-    ///   - salt: The encoding key
-    /// - Returns: Array of encoded bytes
+    ///   - text: Plain text to encode
+    ///   - key: XOR key for encoding
+    /// - Returns: Encoded byte array
+    static func encode(text: String, key: UInt8) -> [UInt8] {
+        return Array(text.utf8).map { $0 ^ key }
+    }
+}
+
+// MARK: - Legacy Compatibility
+
+/// Maintains backward compatibility with existing encoded values throughout the project.
+/// Routes all calls to `StringCipher` internally.
+struct StringObfuscation {
+    static func deobfuscate(bytes: [UInt8], salt: UInt8) -> String {
+        return StringCipher.decode(data: bytes, key: salt)
+    }
+
     static func encode(input: String, salt: UInt8) -> [UInt8] {
-        return Array(input.utf8).map { $0 ^ salt }
+        return StringCipher.encode(text: input, key: salt)
     }
 }

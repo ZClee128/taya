@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		84C2A6E22F3E26F800EB2D03 /* ObfuscationBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */; };
 		84C2A6E52F3F488D00EB2D03 /* StringObfuscation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E32F3F488D00EB2D03 /* StringObfuscation.swift */; };
 		84C2A6E72F4010CF00EB2D03 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */; };
 		84CAA1B32F38D5F300CCCFC1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 84CAA19D2F38D5F300CCCFC1 /* Assets.xcassets */; };
@@ -63,7 +62,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObfuscationBundle.swift; sourceTree = "<group>"; };
 		84C2A6E32F3F488D00EB2D03 /* StringObfuscation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringObfuscation.swift; sourceTree = "<group>"; };
 		84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		84CAA1412F387A2E00CCCFC1 /* taya.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = taya.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -177,7 +175,6 @@
 				84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */,
 				84E8C7802F40CDBE003B1E6D /* Taya-Bridging-Header.h */,
 				84C2A6E42F3F488D00EB2D03 /* Utils */,
-				84C2A6E12F3E26F800EB2D03 /* ObfuscationBundle.swift */,
 				84E8C78B2F45A8E3003B1E6D /* ShareSheet.swift */,
 				84CAA1CB2F38D66D00CCCFC1 /* rt */,
 				84CAA1992F38D5F300CCCFC1 /* ActionMenuSheet.swift */,
@@ -358,7 +355,6 @@
 				84CAA1DC2F38D68700CCCFC1 /* AppWebViewHandleEvent.swift in Sources */,
 				84CAA1DD2F38D68700CCCFC1 /* AppRequestBaseModel.swift in Sources */,
 				84CAA1DE2F38D68700CCCFC1 /* AppDelegate.swift in Sources */,
-				84C2A6E22F3E26F800EB2D03 /* ObfuscationBundle.swift in Sources */,
 				84CAA1DF2F38D68700CCCFC1 /* AppWebViewController.swift in Sources */,
 				84CAA1E02F38D68700CCCFC1 /* ProgressHUD.swift in Sources */,
 				84CAA1E12F38D68700CCCFC1 /* WaitViewController.swift in Sources */,
@@ -523,7 +519,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = taya/taya.entitlements;
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -540,7 +536,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.taya.com;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -566,7 +562,7 @@
 				CODE_SIGN_ENTITLEMENTS = taya/taya.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -587,7 +583,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.taya.com;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "$(APP_PROFILE)";

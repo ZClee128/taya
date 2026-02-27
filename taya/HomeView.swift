@@ -1,283 +1,203 @@
-//
-//  HomeView.swift
-//  taya
-//
-//  Created by Developer on 2025/10/10.
-//
-
 import SwiftUI
+import AVKit
 
+/// "Today" tab — the main daily lifestyle feed.
 struct HomeView: View {
     @ObservedObject var sessionManager: SessionManager
-    @State private var showActionSheet = false
-    @State private var showReportAlert = false
-    @State private var selectedPost: Post?
-    @State private var feedType = 0 // 0: Featured, 1: Saved
-    
-    @State private var sortedPosts: [Post] = [] // For stability if needed, but computed property is fine for now
-    @State private var postToShare: Post? // For share sheet
+    @State private var tips = SampleData.tips
+    @State private var selectedTip: LifestyleTip? = nil
 
-    // Mock stories data
-    let stories = MockData.posts.prefix(8).map { $0.user }
-    
-    var posts: [Post] {
-        let allPosts = MockData.posts.filter { !sessionManager.blockedUserIds.contains($0.user.id) }
-        if feedType == 1 {
-            // Mock "Saved" by just taking a subset
-            return Array(allPosts.prefix(5))
-        }
-        return allPosts
-    }
+    private let accentGreen = Color(red: 0.36, green: 0.72, blue: 0.66)
+    private let warmCoral = Color(red: 0.96, green: 0.45, blue: 0.45)
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // ... (picker) ...
-                // Top Bar with Toggle
-//                HStack {
-//                    Picker("", selection: $feedType) {
-//                        Text("Featured").tag(0)
-//                        Text("Saved").tag(1)
-//                    }
-//                    .pickerStyle(SegmentedPickerStyle())
-//                    .frame(width: 200)
-//                    .padding(.vertical, 8)
-//                }
-//                .background(Color(UIColor.systemBackground))
-                
-                List {
-                    // ... (stories) ...
-                    // Stories Section
-//                    if feedType == 0 {
-//                        ScrollView(.horizontal, showsIndicators: false) {
-//                            HStack(spacing: 15) {
-//                                ForEach(stories, id: \.self) { user in
-//                                    VStack {
-//                                        AvatarView(username: user.username, size: 60, avatarName: user.avatarName)
-//                                            .overlay(
-//                                                Circle()
-//                                                    .stroke(
-//                                                        LinearGradient(gradient: Gradient(colors: [.purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing),
-//                                                        lineWidth: 3
-//                                                    )
-//                                            )
-//                                        Text(user.username)
-//                                            .font(.caption)
-//                                            .lineLimit(1)
-//                                            .frame(width: 70)
-//                                    }
-//                                }
-//                            }
-//                            .padding(.horizontal)
-//                            .padding(.vertical, 10)
-//                        }
-//                        .listRowInsets(EdgeInsets()) // Remove default list padding
-//                        .padding(.vertical, 5)
-//                    }
-
-                    ForEach(posts) { post in
-                        PostCell(post: post, onAction: {
-                            self.selectedPost = post
-                        }, onShare: {
-                            self.postToShare = post
-                        })
-                        .background(
-                            NavigationLink(destination: PostDetailView(post: post, sessionManager: sessionManager)) {
-                                EmptyView()
-                            }
-                            .opacity(0)
-                        )
-                        .buttonStyle(PlainButtonStyle())
-                    }
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    greetingHeader
+                    dailyQuoteCard
+                    featuredVideoSection
+                    tipsFeedSection
                 }
-                .listStyle(PlainListStyle()) // Remove inset grouped style if present
+                .padding(.bottom, 30)
             }
-            .navigationBarTitle("Taya 🌌", displayMode: .inline)
-            .sheet(item: $selectedPost) { post in
-                ActionMenuSheet(
-                    user: post.user,
-                    sessionManager: sessionManager,
-                    onReport: {
-                        sessionManager.reportUser(post.user)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            showReportAlert = true
-                        }
-                    },
-                    onBlock: {
-                        sessionManager.blockUser(post.user)
-                    }
-                )
-            }
-            .background(EmptyView().sheet(item: $postToShare) { post in
-                ShareSheet(activityItems: ["Check out this post by \(post.user.username): \(post.description)"])
-            })
-            .alert(isPresented: $showReportAlert) {
-                Alert(title: Text("Report Submitted"), message: Text("Thank you for reporting. This post will be reviewed."), dismissButton: .default(Text("OK")))
-            }
+            .background(Color(UIColor.systemGroupedBackground))
+            .navigationBarTitle("Today")
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+        .sheet(item: $selectedTip) { tip in
+            PostDetailView(tip: tip)
         }
     }
-}
 
-struct PostCell: View {
-    let post: Post
-    var onAction: () -> Void
-    var onShare: () -> Void // New callback
-    @State private var isLiked = false
-    @State private var isBookmarked = false
-    @State private var likeScale: CGFloat = 1.0
+    // MARK: - Greeting
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Header
-            HStack {
-                AvatarView(username: post.user.username, size: 40, avatarName: post.user.avatarName)
-                
-                VStack(alignment: .leading) {
-                    HStack {
-                        Text(post.user.username)
-                            .font(.headline)
-                        if post.user.badges.contains("Verified") {
-                            Image(systemName: "checkmark.circle.fill") // checkmark.seal.fill is iOS 14+
-                                .foregroundColor(.blue)
-                                .font(.caption)
-                        }
-                    }
-                    Text("Astrophotographer")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                Button(action: onAction) {
-                    Image(systemName: "ellipsis")
-                        .foregroundColor(.gray)
-                        .padding(10)
-                }
-                .buttonStyle(PlainButtonStyle()) // Prevent triggering navigation
-            }
-            .padding(.top, 5)
-
-            // Image/Media
-            ZStack {
-                // Try to load as named asset (Assets.xcassets)
-                if let uiImage = UIImage(named: post.imageName) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(4/3, contentMode: .fill) // Uniform aspect ratio
-                        .frame(maxWidth: .infinity)
-                        .clipped() // Clip overflow
-                } 
-                // Try to load from bundle path (if file is loosely in project)
-                else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpeg"), let uiImage = UIImage(contentsOfFile: path) {
-                     Image(uiImage: uiImage)
-                         .resizable()
-                         .aspectRatio(4/3, contentMode: .fill)
-                         .frame(maxWidth: .infinity)
-                         .clipped()
-                }
-                else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpg"), let uiImage = UIImage(contentsOfFile: path) {
-                     Image(uiImage: uiImage)
-                         .resizable()
-                         .aspectRatio(4/3, contentMode: .fill)
-                         .frame(maxWidth: .infinity)
-                         .clipped()
-                }
-                // Fallback to SF Symbol
-                else {
-                    ZStack {
-                        Color.gray.opacity(0.1)
-                        Image(systemName: post.imageName)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 50, height: 50)
-                            .foregroundColor(.gray)
-                    }
-                    .aspectRatio(4/3, contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                }
-                
-                // Video Indicator
-                if post.videoName != nil {
-                     Image(systemName: "play.circle.fill")
-                         .font(.system(size: 50))
-                         .foregroundColor(.white)
-                         .shadow(radius: 5)
-                }
-            }
-            .background(Color.black.opacity(0.05))
-            .cornerRadius(12)
-            .onTapGesture(count: 2) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.3, blendDuration: 0)) {
-                    isLiked = true
-                    likeScale = 1.2
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation {
-                        likeScale = 1.0
-                    }
-                }
-            }
-
-            // Action Buttons
-            HStack(spacing: 20) {
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.3)) {
-                        isLiked.toggle()
-                        likeScale = isLiked ? 1.2 : 1.0
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation {
-                            likeScale = 1.0
-                        }
-                    }
-                }) {
-                    Image(systemName: isLiked ? "heart.fill" : "heart")
-                        .font(.system(size: 24))
-                        .foregroundColor(isLiked ? .red : .primary)
-                        .scaleEffect(likeScale)
-                }
-                .buttonStyle(PlainButtonStyle())
-
-                // Comment Button (Tap falls through to cell NavigationLink)
-                Image(systemName: "bubble.right")
-                    .font(.system(size: 22))
-                    .foregroundColor(.primary)
-                
-                Button(action: onShare) {
-                    Image(systemName: "paperplane")
-                        .font(.system(size: 22))
-                        .foregroundColor(.primary)
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                Spacer()
-                
-                Button(action: {
-                    withAnimation {
-                        isBookmarked.toggle()
-                    }
-                }) {
-                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                        .font(.system(size: 22))
-                        .foregroundColor(.primary)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .padding(.vertical, 5)
-
-            // Likes & Caption
-            Text("\(post.likes + (isLiked ? 1 : 0)) likes")
+    private var greetingHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(greetingText)
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+            Text("Let's make today count ✨")
                 .font(.subheadline)
-                .bold()
-
-            Text(post.user.username).bold() + Text(" ") + Text(post.description)
+                .foregroundColor(.secondary)
         }
-        .padding(.vertical, 10)
+        .padding(.horizontal)
+        .padding(.top, 8)
     }
-}
 
+    private var greetingText: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let name = sessionManager.currentUser.displayName
+        if hour < 12 { return "Good Morning, \(name)" }
+        if hour < 17 { return "Good Afternoon, \(name)" }
+        return "Good Evening, \(name)"
+    }
 
-struct HomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        HomeView(sessionManager: SessionManager())
+    // MARK: - Daily Quote
+
+    private var dailyQuoteCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "quote.opening")
+                    .foregroundColor(accentGreen)
+                Spacer()
+            }
+            Text("The greatest wealth is health.")
+                .font(.body)
+                .italic()
+                .foregroundColor(.primary)
+            Text("— Virgil")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(14)
+        .padding(.horizontal)
+    }
+
+    // MARK: - Featured Video
+
+    private var featuredVideoSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Featured")
+                .font(.headline)
+                .padding(.horizontal)
+
+            if let firstVideoTip = tips.first(where: { $0.videoName != nil }) {
+                Button(action: {
+                    self.selectedTip = firstVideoTip
+                }) {
+                    ZStack(alignment: .bottomLeading) {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(accentGreen.opacity(0.3))
+                            .frame(height: 200)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(firstVideoTip.title)
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text(firstVideoTip.summary)
+                                .font(.caption)
+                                .foregroundColor(Color.white.opacity(0.9))
+                                .lineLimit(2)
+                        }
+                        .padding(12)
+                        .background(
+                            LinearGradient(gradient: Gradient(colors: [.clear, .black.opacity(0.7)]),
+                                           startPoint: .top, endPoint: .bottom)
+                        )
+                        .cornerRadius(14)
+
+                        Image(systemName: "play.circle.fill")
+                            .resizable()
+                            .frame(width: 50, height: 50)
+                            .foregroundColor(Color.white.opacity(0.9))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    // MARK: - Tips Feed
+
+    private var tipsFeedSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("For You")
+                .font(.headline)
+                .padding(.horizontal)
+
+            ForEach(tips) { tip in
+                Button(action: {
+                    self.selectedTip = tip
+                }) {
+                    tipCard(tip)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+    }
+
+    private func tipCard(_ tip: LifestyleTip) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(categoryColor(tip.category).opacity(0.15))
+                    .frame(width: 50, height: 50)
+                Image(systemName: tip.iconName)
+                    .font(.system(size: 22))
+                    .foregroundColor(categoryColor(tip.category))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(tip.title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                HStack(spacing: 12) {
+                    HStack(spacing: 2) {
+                        Image(systemName: "tag.fill")
+                            .font(.caption)
+                        Text(tip.category)
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary)
+                    HStack(spacing: 2) {
+                        Image(systemName: "heart.fill")
+                            .font(.caption)
+                        Text("\(tip.likes)")
+                            .font(.caption)
+                    }
+                    .foregroundColor(warmCoral)
+                }
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(12)
+        .padding(.horizontal)
+    }
+
+    private func categoryColor(_ name: String) -> Color {
+        switch name {
+        case "Recipes": return Color(red: 1, green: 0.42, blue: 0.42)
+        case "Fitness": return Color(red: 0.31, green: 0.80, blue: 0.77)
+        case "Mindfulness": return Color(red: 0.65, green: 0.55, blue: 0.98)
+        case "Sleep": return Color(red: 0.39, green: 0.40, blue: 0.95)
+        case "Nutrition": return Color(red: 0.06, green: 0.73, blue: 0.51)
+        case "Self-Care": return Color(red: 0.96, green: 0.45, blue: 0.71)
+        default: return .gray
+        }
     }
 }

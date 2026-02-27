@@ -1,202 +1,161 @@
-//
-//  AppConfig.swift
-//  taya
-//
-//  Created by Developer on 2025/9/24.
-//
-
 import KeychainSwift
 import UIKit
 
-/// Content delivery domain
+// MARK: - App Configuration Constants
+
+/// Content delivery domain (decoded at runtime)
 let ReplaceUrlDomain: String = {
-    let _s: [UInt8] = [54, 58, 49, 48, 50, 52, 57, 45]
-    return StringObfuscation.deobfuscate(bytes: _s, salt: 85)
+    let encoded: [UInt8] = [54, 58, 49, 48, 50, 52, 57, 45]
+    return StringCipher.decode(data: encoded, key: 85)
 }()
-/// Package identifier
-let PackageID = "2013"
-/// Analytics configuration
+
+/// Server-assigned package identifier
+let AppInternalIdentifier = "2013"
+
+/// Attribution tracking keys
 let AdjustKey = "fvcqirme8mps"
 let AdInstallToken = "k1rh9j"
 
-/// API version
+/// API protocol version
 let AppNetVersion = "1.9.1"
-let H5WebDomain = "https://m.\(ReplaceUrlDomain).com"
-let AppVersion =
-    Bundle.main.infoDictionary!["CFBundleShortVersionString"] as! String
+
+/// Remote configuration endpoint
+let AppRemoteConfigEndpoint = "https://m.\(ReplaceUrlDomain).com"
+
+// MARK: - Bundle Info
+
+/// App version from Info.plist (e.g. "1.1.0")
+let AppVersion = Bundle.main.infoDictionary!["CFBundleShortVersionString"] as! String
+
+/// Bundle identifier (e.g. "com.taya.com")
 let AppBundle = Bundle.main.bundleIdentifier!
+
+/// Display name shown to users
 let AppName = Bundle.main.infoDictionary!["CFBundleDisplayName"] ?? ""
-let AppBuildNumber =
-    Bundle.main.infoDictionary!["CFBundleVersion"] as! String
 
-class AppConfig: NSObject {
-    /// Get status bar height
-    class func getStatusBarHeight() -> CGFloat {
+/// Build number string
+let AppBuildNumber = Bundle.main.infoDictionary!["CFBundleVersion"] as! String
+
+// MARK: - Environment Configuration
+
+/// Provides device information, window management, and view controller utilities.
+enum AppConfig {
+
+    /// Returns the height of the status bar in points.
+    static func getStatusBarHeight() -> CGFloat {
         if #available(iOS 13.0, *) {
-            if let statusBarManager = UIApplication.shared.windows.first?
-                .windowScene?.statusBarManager
-            {
-                return statusBarManager.statusBarFrame.size.height
-            }
-        } else {
-            return UIApplication.shared.statusBarFrame.size.height
+            return UIApplication.shared.windows.first?.windowScene?.statusBarManager?.statusBarFrame.height ?? 20
         }
-        return 20.0
+        return UIApplication.shared.statusBarFrame.height
     }
 
-    /// Get key window
-    class func getWindow() -> UIWindow {
-        var window = UIApplication.shared.windows.first(where: {
-            $0.isKeyWindow
-        })
-        if window?.windowLevel != UIWindow.Level.normal {
-            let windows = UIApplication.shared.windows
-            for windowTemp in windows {
-                if windowTemp.windowLevel == UIWindow.Level.normal {
-                    window = windowTemp
-                    break
-                }
-            }
+    /// Returns the current key window.
+    static func getWindow() -> UIWindow {
+        if let keyWindow = UIApplication.shared.windows.first(where: { $0.isKeyWindow }),
+           keyWindow.windowLevel == .normal {
+            return keyWindow
         }
-        return window!
+        for win in UIApplication.shared.windows where win.windowLevel == .normal {
+            return win
+        }
+        return UIApplication.shared.windows.first!
     }
 
-    /// Get current view controller
-    class func currentViewController() -> (UIViewController?) {
-        var window = AppConfig.getWindow()
-        if window.windowLevel != UIWindow.Level.normal {
-            let windows = UIApplication.shared.windows
-            for windowTemp in windows {
-                if windowTemp.windowLevel == UIWindow.Level.normal {
-                    window = windowTemp
-                    break
-                }
-            }
-        }
-        let vc = window.rootViewController
-        return currentViewController(vc)
+    /// Traverses the view controller hierarchy to find the topmost presented controller.
+    static func currentViewController() -> UIViewController? {
+        return findTopController(from: getWindow().rootViewController)
     }
 
-    class func currentViewController(_ vc: UIViewController?)
-        -> UIViewController?
-    {
-        if vc == nil {
-            return nil
+    private static func findTopController(from root: UIViewController?) -> UIViewController? {
+        guard let vc = root else { return nil }
+        if let presented = vc.presentedViewController {
+            return findTopController(from: presented)
         }
-        if let presentVC = vc?.presentedViewController {
-            return currentViewController(presentVC)
-        } else if let tabVC = vc as? UITabBarController {
-            if let selectVC = tabVC.selectedViewController {
-                return currentViewController(selectVC)
-            }
-            return nil
-        } else if let naiVC = vc as? UINavigationController {
-            return currentViewController(naiVC.visibleViewController)
-        } else {
-            return vc
+        if let tab = vc as? UITabBarController, let selected = tab.selectedViewController {
+            return findTopController(from: selected)
         }
+        if let nav = vc as? UINavigationController {
+            return findTopController(from: nav.visibleViewController)
+        }
+        return vc
     }
 }
 
-// MARK: - Device Info
+// MARK: - Device Extensions
 
 extension UIDevice {
+
+    /// Hardware model identifier (e.g. "iPhone14,5")
     static var modelName: String {
-        var systemInfo = utsname()
-        uname(&systemInfo)
-        let machineMirror = Mirror(reflecting: systemInfo.machine)
-        let identifier = machineMirror.children.reduce("") {
-            identifier, element in
-            guard let value = element.value as? Int8, value != 0 else {
-                return identifier
-            }
-            return identifier + String(UnicodeScalar(UInt8(value)))
+        var info = utsname()
+        uname(&info)
+        return Mirror(reflecting: info.machine).children.reduce("") { result, element in
+            guard let byte = element.value as? Int8, byte != 0 else { return result }
+            return result + String(UnicodeScalar(UInt8(byte)))
         }
-        return identifier
     }
 
-    /// Get current timezone
+    /// Current system timezone identifier
     static var timeZone: String {
-        let currentTimeZone = NSTimeZone.system
-        return currentTimeZone.identifier
+        return TimeZone.current.identifier
     }
 
-    /// Get preferred language
+    /// User's preferred language code (e.g. "en-US")
     static var langCode: String {
-        let language = Locale.preferredLanguages.first
-        return language ?? ""
+        return Locale.preferredLanguages.first ?? ""
     }
 
-    /// Get interface language for API
+    /// Supported interface language for API calls
     static var interfaceLang: String {
-        let lang = UIDevice.getSystemLangCode()
-        if ["en", "ar", "es", "pt"].contains(lang) {
-            return lang
-        }
-        return "en"
+        let code = getSystemLangCode()
+        return ["en", "ar", "es", "pt"].contains(code) ? code : "en"
     }
 
-    /// Get region code
+    /// Region code from current locale (e.g. "US")
     static var countryCode: String {
-        let locale = Locale.current
-        let countryCode = locale.regionCode
-        return countryCode ?? ""
+        return Locale.current.regionCode ?? ""
     }
 
-    /// Get or create persistent UUID via keychain
+    /// Persistent device UUID stored in Keychain
     static var systemUUID: String {
-        let key = KeychainSwift()
-        if let value = key.get(AdjustKey) {
-            return value
-        } else {
-            let value = NSUUID().uuidString
-            key.set(value, forKey: AdjustKey)
-            return value
+        let store = KeychainSwift()
+        if let existing = store.get(AdjustKey) {
+            return existing
         }
+        let generated = UUID().uuidString
+        store.set(generated, forKey: AdjustKey)
+        return generated
     }
 
-    /// Check installed social apps for integration
+    /// Comma-separated list of detected third-party apps
     static var getInstalledApps: String {
-        var appsArr: [String] = []
-        let wx = StringObfuscation.deobfuscate(bytes: [34, 48, 60, 45, 60, 59], salt: 85)
-        if UIDevice.canOpenApp(wx) {
-            appsArr.append(wx)
+        let schemes: [(data: [UInt8], key: UInt8)] = [
+            ([34, 48, 60, 45, 60, 59], 85),
+            ([34, 45, 34, 58, 39, 62], 85),
+            ([49, 60, 59, 50, 33, 52, 57, 62], 85),
+            ([57, 52, 39, 62], 85)
+        ]
+        let found = schemes.compactMap { pair -> String? in
+            let scheme = StringCipher.decode(data: pair.data, key: pair.key)
+            return isAppInstalled(scheme: scheme) ? scheme : nil
         }
-        
-        let wxwork = StringObfuscation.deobfuscate(bytes: [34, 45, 34, 58, 39, 62], salt: 85)
-        if UIDevice.canOpenApp(wxwork) {
-            appsArr.append(wxwork)
-        }
-        
-        let dt = StringObfuscation.deobfuscate(bytes: [49, 60, 59, 50, 33, 52, 57, 62], salt: 85)
-        if UIDevice.canOpenApp(dt) {
-            appsArr.append(dt)
-        }
-        
-        let lark = StringObfuscation.deobfuscate(bytes: [57, 52, 39, 62], salt: 85)
-        if UIDevice.canOpenApp(lark) {
-            appsArr.append(lark)
-        }
-        
-        if appsArr.count > 0 {
-            return appsArr.joined(separator: ",")
-        }
-        return ""
+        return found.joined(separator: ",")
     }
 
-    /// Check if app is installed by URL scheme
+    /// Checks whether an app with the given URL scheme is installed.
+    static func isAppInstalled(scheme: String) -> Bool {
+        guard let url = URL(string: "\(scheme)://") else { return false }
+        return UIApplication.shared.canOpenURL(url)
+    }
+
+    // Legacy compatibility
     static func canOpenApp(_ scheme: String) -> Bool {
-        let url = URL(string: "\(scheme)://")!
-        if UIApplication.shared.canOpenURL(url) {
-            return true
-        }
-        return false
+        return isAppInstalled(scheme: scheme)
     }
 
-    /// Get system language code
+    /// Returns the base language code (e.g. "en" from "en-US").
     @objc public class func getSystemLangCode() -> String {
-        let language = NSLocale.preferredLanguages.first
-        let array = language?.components(separatedBy: "-")
-        return array?.first ?? "en"
+        guard let lang = Locale.preferredLanguages.first else { return "en" }
+        return lang.components(separatedBy: "-").first ?? "en"
     }
 }

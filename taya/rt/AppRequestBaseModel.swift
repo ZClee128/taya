@@ -1,37 +1,73 @@
 import Foundation
 import HandyJSON
- 
-class AppRequestModel: NSObject {
-    
-    @objc var requestPath: String = ""
-    var requestServer: String = ""
-    var params: Dictionary<String, Any> = [:]
-    
+
+// MARK: - Request Configuration
+
+/// Encapsulates parameters for a single API request.
+class NetworkRequest: NSObject {
+    @objc var endpoint: String = ""
+    var baseURL: String
+    var parameters: [String: Any] = [:]
+
     override init() {
-        self.requestServer = "http://app.\(ReplaceUrlDomain).com"
+        self.baseURL = "http://app.\(ReplaceUrlDomain).com"
+    }
+
+    // Legacy property mapping
+    @objc var requestPath: String {
+        get { endpoint }
+        set { endpoint = newValue }
+    }
+    var requestServer: String {
+        get { baseURL }
+        set { baseURL = newValue }
+    }
+    var params: [String: Any] {
+        get { parameters }
+        set { parameters = newValue }
     }
 }
 
-/// Standard API response model
-struct AppBaseResponse: HandyJSON {
+// MARK: - Response Models
+
+/// Parsed API response envelope.
+struct APIResponse: HandyJSON {
     var errno: Int!
     var msg: String?
     var data: Any?
 }
 
-/// Error response model
-public struct AppErrorResponse {
-    let errorCode: Int
-    let errorMsg: String
+/// Represents an API error with code and message.
+struct APIError {
+    let code: Int
+    let message: String
+}
+
+/// Standard API result codes.
+enum APIResultCode: Int {
+    case success    = 0
+    case networkErr = -10000
+    case relogin    = -100
+}
+
+// MARK: - Legacy Type Aliases
+
+typealias AppRequestModel = NetworkRequest
+typealias AppBaseResponse = APIResponse
+typealias AppErrorResponse = APIError
+
+extension AppErrorResponse {
+    var errorCode: Int { code }
+    var errorMsg: String { message }
+
     init(errorCode: Int, errorMsg: String) {
-        self.errorCode = errorCode
-        self.errorMsg = errorMsg
+        self.init(code: errorCode, message: errorMsg)
     }
 }
 
-/// API result status codes
-enum RequestResultCode: Int {
-    case Normal         = 0
-    case NetError       = -10000
-    case NeedReLogin    = -100
+typealias RequestResultCode = APIResultCode
+extension APIResultCode {
+    static let Normal = APIResultCode.success
+    static let NetError = APIResultCode.networkErr
+    static let NeedReLogin = APIResultCode.relogin
 }

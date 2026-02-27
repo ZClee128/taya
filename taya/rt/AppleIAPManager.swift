@@ -1,449 +1,364 @@
 import UIKit
 import StoreKit
 
-/// Maximum retry attempts for payment verification
-let APPLE_IAP_MAX_RETRY_COUNT = 9
+// MARK: - Purchase Types
 
-/// Payment type
+/// Maximum receipt verification retry attempts before giving up.
+private let kMaxVerificationRetries = 9
+
+/// Distinguishes between one-time purchases and auto-renewable subscriptions.
 enum ApplePayType {
     case Pay
     case Subscribe
 }
 
-/// Payment status
+/// Describes the outcome of a purchase flow.
 enum AppleIAPStatus: String {
-    case unknow            = "未知类型"
-    case createOrderFail   = "创建订单失败"
-    case notArrow          = "设备不允许"
-    case noProductId       = "缺少产品Id"
-    case failed            = "交易失败/取消"
-    case restored          = "已购买过该商品"
-    case deferred          = "交易延期"
-// optimized by lcdayoxhyd
-    case verityFail        = "服务器验证失败"
-    case veritySucceed     = "服务器验证成功"
-    case renewSucceed      = "自动续订成功"
+    case unknown           = "Unknown"
+    case orderCreationFail = "Order creation failed"
+    case deviceRestricted  = "Device not allowed"
+    case productNotFound   = "Product ID missing"
+    case cancelled         = "Transaction cancelled"
+    case alreadyOwned      = "Already purchased"
+    case deferred          = "Transaction deferred"
+    case verityFail        = "Verification failed"
+    case veritySucceed     = "Verification succeeded"
+    case renewSucceed      = "Auto-renewal succeeded"
+
+    // Legacy raw values for backward compatibility
+    static let createOrderFail = AppleIAPStatus.orderCreationFail
+    static let notArrow = AppleIAPStatus.deviceRestricted
+    static let noProductId = AppleIAPStatus.productNotFound
+    static let failed = AppleIAPStatus.cancelled
+    static let restored = AppleIAPStatus.alreadyOwned
 }
 
 typealias IAPcompletionHandle = (AppleIAPStatus, Double, ApplePayType) -> Void
 
-class AppleIAPManager: NSObject {
-    
-    var completionHandle: IAPcompletionHandle?
-    private var productInfoReq: SKProductsRequest?
-    private var reqRetryCountDict = [String: Int]()
-    private var payCacheList = [[String: String]]()
-    private var subscribeCacheList = [[String: String]]()
-    private var createOrderId: String?
-    private var currentPayType: ApplePayType = .Pay
-    
+// MARK: - Purchase Manager
+
+/// Manages the complete Apple IAP lifecycle:
+/// order creation → product query → payment → receipt upload → server verification.
+final class AppleIAPManager: NSObject {
+
     static let shared = AppleIAPManager()
-    override func copy() -> Any { return self }
-    override func mutableCopy() -> Any { return self }
-    
+
+    var completionHandle: IAPcompletionHandle?
+
+    private var productRequest: SKProductsRequest?
+    private var retryCounters: [String: Int] = [:]
+    private var cachedPurchases: [[String: String]] = []
+    private var cachedSubscriptions: [[String: String]] = []
+    private var pendingOrderId: String?
+    private var activePayType: ApplePayType = .Pay
+
     private override init() {
         super.init()
-        SKPaymentQueue.default().add(self as SKPaymentTransactionObserver)
-        NotificationCenter.default.addObserver(self, selector: #selector(appWillTerminate),
-                                               name: UIApplication.willTerminateNotification,
-                                               object: nil)
+        SKPaymentQueue.default().add(self)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(applicationWillTerminate),
+            name: UIApplication.willTerminateNotification, object: nil
+        )
     }
 
-    @objc func appWillTerminate() {
-        SKPaymentQueue.default().remove(self as SKPaymentTransactionObserver)
+    @objc private func applicationWillTerminate() {
+        SKPaymentQueue.default().remove(self)
     }
-}
 
-// MARK: - Purchase API
+    // MARK: - Public API
 
-extension AppleIAPManager {
-    /// Create purchase order on server
-    fileprivate func req_pay_createAppleOrder(productId: String, source: Int, handle: @escaping (String?, Bool) -> Void) {
-        let reqModel = AppRequestModel.init()
-        reqModel.requestPath = "mf/recharge/createApplePay"
-        var dict = Dictionary<String, Any>()
-        dict["productId"] = productId
-        dict["source"] = source
-        reqModel.params = dict
-        AppRequestTool.startPostRequest(model: reqModel) { succeed, result, errorModel in
-            guard succeed == true else {
-                handle(nil, succeed)
-                return
-            }
-
-            var orderId: String?
-            let dict = result as? [String: Any]
-            if let value = dict?["orderNum"] as? String {
-                orderId = value
-            }
-            handle(orderId, succeed)
-        }
-    }
-    
-    /// Upload purchase receipt to server for verification
-    fileprivate func req_pay_uploadAppletransaction(_ transactionId: String, params: [String: String]) {
-        let reqModel = AppRequestModel.init()
-        reqModel.requestPath = "mf/recharge/applePayNotify"
-        reqModel.params = params
-        AppRequestTool.startPostRequest(model: reqModel) { succeed, result, errorModel in
-            guard succeed == true || errorModel?.errorCode == 405 else {
-                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2) {
-                    self.transcationPurchasedToCheck(transactionId, .Pay)
-                }
-                return
-            }
-
-            let dict = result as? [String: Any]
-            let reportMoney: Double = {
-                if let d = dict?["reportMoney"] as? Double { return d }
-                return 0
-            }()
-            
-            let newPayCacheList = self.payCacheList.filter({$0["transactionId"] != transactionId})
-            let diskPath = self.getPayCachePath()
-            NSKeyedArchiver.archiveRootObject(newPayCacheList, toFile: diskPath)
-                        
-            self.completionHandle?(.veritySucceed, reportMoney, .Pay)
-        }
-    }
-}
-
-// MARK: - Subscription API
-
-extension AppleIAPManager {
-    /// Create subscription order on server
-    fileprivate func req_subscribe_createAppleOrder(productId: String, source: Int, handle: @escaping (String?, Bool) -> Void) {
-        let reqModel = AppRequestModel.init()
-        reqModel.requestPath = "mf/AutoSub/AppleCreateOrder"
-        var dict = Dictionary<String, Any>()
-        dict["productId"] = productId
-        dict["source"] = source
-        reqModel.params = dict
-        AppRequestTool.startPostRequest(model: reqModel) { succeed, result, errorModel in
-            guard succeed == true else {
-                handle(nil, succeed)
-                return
-            }
-
-            var orderId: String? = nil
-            let dict = result as? [String: Any]
-            if let value = dict?["orderId"] as? String {
-                orderId = value
-            }
-            handle(orderId, succeed)
-        }
-    }
-    
-    /// Upload subscription receipt to server for verification
-    fileprivate func req_subscribe_uploadAppletransaction(_ transactionId: String, params: [String: String]) {
-        let reqModel = AppRequestModel.init()
-        reqModel.requestPath = "mf/AutoSub/ApplePaySuccess"
-        reqModel.params = params
-        AppRequestTool.startPostRequest(model: reqModel) { succeed, result, errorModel in
-            guard succeed == true || errorModel?.errorCode == 405 else {
-                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 3) {
-                    self.transcationPurchasedToCheck(transactionId, .Subscribe)
-                }
-                return
-            }
-
-            let dict = result as? [String: Any]
-            let reportMoney: Double = {
-                if let d = dict?["reportMoney"] as? Double { return d }
-                return 0
-            }()
-
-            let newSubscribeCacheList = self.subscribeCacheList.filter({$0["transactionId"] != transactionId})
-            let diskPath = self.getSubscribeCachePath()
-            NSKeyedArchiver.archiveRootObject(newSubscribeCacheList, toFile: diskPath)
- 
-            self.completionHandle?(.veritySucceed, reportMoney, .Subscribe)
-        }
-    }
-}
-
-// MARK: - Transaction Data Management
-
-extension AppleIAPManager {
-    /// Initialize payment data from disk cache
-    private func iap_initData() {
-        self.payCacheList = getLocalPayCacheList(payType: .Pay)
-        self.subscribeCacheList = getLocalPayCacheList(payType: .Subscribe)
-        self.createOrderId = nil
-    }
-    
-    /// Load cached transaction list from disk
-    private func getLocalPayCacheList(payType: ApplePayType) -> [[String: String]] {
-        var list: [[String: String]]?
-        var diskPath = ""
-        if payType == .Pay {
-            diskPath = getPayCachePath()
-        } else {
-            diskPath = getSubscribeCachePath()
-        }
-        
-        if FileManager.default.fileExists(atPath: diskPath) {
-            list = NSKeyedUnarchiver.unarchiveObject(withFile: diskPath) as? [[String: String]]
-            if list == nil {
-               try? FileManager.default.removeItem(atPath: diskPath)
-            }
-        }
-        if list == nil {
-            list = [[String: String]]()
-        }
-        return list!
-    }
-    
-    /// Get purchase cache file path
-    private func getPayCachePath() -> String {
-        let documentDirectoryPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first ?? ""
-        let appDirectoryPath = (documentDirectoryPath as NSString).appendingPathComponent("App")
-        
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: appDirectoryPath) == false {
-           try? fileManager.createDirectory(atPath: appDirectoryPath, withIntermediateDirectories: true)
-        }
-    
-        let filePath = (appDirectoryPath as NSString).appendingPathComponent("OrderTransactionInfo_Cache")
-        return filePath
-    }
-    
-    /// Get subscription cache file path
-    private func getSubscribeCachePath() -> String {
-        let documentDirectoryPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first ?? ""
-        let appDirectoryPath = (documentDirectoryPath as NSString).appendingPathComponent("App")
-        
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: appDirectoryPath) == false {
-           try? fileManager.createDirectory(atPath: appDirectoryPath, withIntermediateDirectories: true)
-        }
-    
-        let filePath = (appDirectoryPath as NSString).appendingPathComponent("OrderTransactionInfo_Subscribe_Cache")
-        return filePath
-    }
- 
-    /// Get receipt data for server verification
-    fileprivate func getVerifyData(_ transactionId: String, _ payType: ApplePayType) -> String? {
-        var paramsArr = [[String: String]]()
-        switch(payType) {
-        case .Pay:
-            paramsArr = self.payCacheList.filter({$0["transactionId"] == transactionId})
-        case .Subscribe:
-            paramsArr = self.subscribeCacheList.filter({$0["transactionId"] == transactionId})
-        }
-        if paramsArr.count > 0 && paramsArr.first!["verifyData"] != nil {
-            return paramsArr.first!["verifyData"]
-        }
-
-        guard let receiptUrl = Bundle.main.appStoreReceiptURL else { return nil }
-        let data = NSData(contentsOf: receiptUrl)
-        let receiptStr = data?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0))
-        return receiptStr
-    }
-}
-
-// MARK: - Retry Logic
-
-extension AppleIAPManager {
-    /// Check for unfinished transactions and retry verification
-    func iap_checkUnfinishedTransactions() {
-        iap_initData()
-
-        for dict in self.payCacheList {
-            iap_failedRetry(dict["transactionId"], .Pay)
-        }
-        
-        for dict in self.subscribeCacheList {
-            iap_failedRetry(dict["transactionId"], .Subscribe)
-        }
-    }
-    
-    /// Retry failed verification
-    private func iap_failedRetry(_ transactionId: String?, _ payType: ApplePayType) {
-        guard let transactionId = transactionId else { return }
-        reqRetryCountDict[transactionId] = 0
-        transcationPurchasedToCheck(transactionId, payType)
-    }
-}
-
-// MARK: - Payment Flow
-
-extension AppleIAPManager {
-    /// Start Apple payment flow: create order → query product → pay → verify
+    /// Starts a purchase or subscription flow.
     func iap_startPurchase(productId: String, payType: ApplePayType, source: Int = 0, handle: @escaping IAPcompletionHandle) {
-        iap_initData()
-        self.completionHandle = handle
-        self.currentPayType = payType
-        
-        switch(payType) {
-        case .Pay:
-            req_pay_createAppleOrder(productId: productId, source: source) { [weak self] orderId, succeed in
-                guard let self = self else { return }
-                guard succeed == true && orderId != nil else {
-                    self.completionHandle?(.createOrderFail, 0, .Pay)
-                    return
-                }
-                
-                self.createOrderId = orderId
-                self.requestProductInfo(productId)
+        loadCachedData()
+        completionHandle = handle
+        activePayType = payType
+
+        let orderCreator: (@escaping (String?, Bool) -> Void) -> Void = { callback in
+            switch payType {
+            case .Pay:
+                self.createPurchaseOrder(productId: productId, source: source, callback: callback)
+            case .Subscribe:
+                self.createSubscriptionOrder(productId: productId, source: source, callback: callback)
             }
-        
-        case .Subscribe:
-            req_subscribe_createAppleOrder(productId: productId, source: source) { [weak self] orderId, succeed in
-                guard let self = self else { return }
-                guard succeed == true && orderId != nil else {
-                    self.completionHandle?(.createOrderFail, 0, .Subscribe)
-                    return
-                }
-                
-                self.createOrderId = orderId
-                self.requestProductInfo(productId)
+        }
+
+        orderCreator { [weak self] orderId, success in
+            guard let self = self else { return }
+            guard success, let orderId = orderId else {
+                self.completionHandle?(.orderCreationFail, 0, payType)
+                return
+            }
+            self.pendingOrderId = orderId
+            self.fetchProduct(productId)
+        }
+    }
+
+    /// Checks for and retries any unfinished transaction verifications from disk cache.
+    func iap_checkUnfinishedTransactions() {
+        loadCachedData()
+        for entry in cachedPurchases {
+            if let tid = entry["transactionId"] {
+                retryCounters[tid] = 0
+                verifyTransaction(tid, payType: .Pay)
+            }
+        }
+        for entry in cachedSubscriptions {
+            if let tid = entry["transactionId"] {
+                retryCounters[tid] = 0
+                verifyTransaction(tid, payType: .Subscribe)
             }
         }
     }
-        
-    /// Query Apple product info and initiate payment
-    fileprivate func requestProductInfo(_ productId: String) {
+}
+
+// MARK: - Order Creation
+
+private extension AppleIAPManager {
+
+    func createPurchaseOrder(productId: String, source: Int, callback: @escaping (String?, Bool) -> Void) {
+        let req = NetworkRequest()
+        req.endpoint = "mf/recharge/createApplePay"
+        req.parameters = ["productId": productId, "source": source]
+        NetworkClient.post(request: req) { ok, result, _ in
+            let orderId = (result as? [String: Any])?["orderNum"] as? String
+            callback(orderId, ok)
+        }
+    }
+
+    func createSubscriptionOrder(productId: String, source: Int, callback: @escaping (String?, Bool) -> Void) {
+        let req = NetworkRequest()
+        req.endpoint = "mf/AutoSub/AppleCreateOrder"
+        req.parameters = ["productId": productId, "source": source]
+        NetworkClient.post(request: req) { ok, result, _ in
+            let orderId = (result as? [String: Any])?["orderId"] as? String
+            callback(orderId, ok)
+        }
+    }
+}
+
+// MARK: - Product Fetching
+
+private extension AppleIAPManager {
+
+    func fetchProduct(_ productId: String) {
         guard SKPaymentQueue.canMakePayments() else {
-            self.completionHandle?(.notArrow, 0, currentPayType)
+            completionHandle?(.deviceRestricted, 0, activePayType)
             return
         }
-        
-        self.clearProductInfoRequest()
-        let identifiers: Set<String> = [productId]
-        productInfoReq = SKProductsRequest(productIdentifiers: identifiers)
-        productInfoReq?.delegate = self
-        productInfoReq?.start()
+        cancelProductRequest()
+        productRequest = SKProductsRequest(productIdentifiers: [productId])
+        productRequest?.delegate = self
+        productRequest?.start()
     }
-    
-    /// Cancel current product info request
-    fileprivate func clearProductInfoRequest() {
-        guard productInfoReq != nil else { return }
-        productInfoReq?.delegate = nil
-        productInfoReq?.cancel()
-        productInfoReq = nil
+
+    func cancelProductRequest() {
+        productRequest?.delegate = nil
+        productRequest?.cancel()
+        productRequest = nil
     }
 }
 
 // MARK: - SKProductsRequestDelegate
 
 extension AppleIAPManager: SKProductsRequestDelegate {
+
     func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
-         guard response.products.count > 0 else {
-             self.completionHandle?( .noProductId, 0, currentPayType)
-             return
-         }
-         
-         let payment = SKPayment(product: response.products.first!)
-         SKPaymentQueue.default().add(payment)
-     }
-    
-    func request(_ request: SKRequest, didFailWithError error: Error) {
-        self.completionHandle?( .noProductId, 0, currentPayType)
+        guard let product = response.products.first else {
+            completionHandle?(.productNotFound, 0, activePayType)
+            return
+        }
+        SKPaymentQueue.default().add(SKPayment(product: product))
     }
-    
-    func requestDidFinish(_ request: SKRequest) {
-        
+
+    func request(_ request: SKRequest, didFailWithError error: Error) {
+        completionHandle?(.productNotFound, 0, activePayType)
     }
 }
 
 // MARK: - SKPaymentTransactionObserver
 
 extension AppleIAPManager: SKPaymentTransactionObserver {
-    /// Handle Apple payment transaction updates
+
     func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
-        for transaction in transactions {
-            switch transaction.transactionState {
+        for tx in transactions {
+            switch tx.transactionState {
             case .purchasing:
                 break
-                
+
             case .purchased:
-                if transaction.original != nil && createOrderId == nil {
-                    // Auto-renewal: no need to call server verification
-                    self.completionHandle?(.renewSucceed, 0, currentPayType)
-                } else {
-                    reqRetryCountDict[transaction.transactionIdentifier!] = 0
-                    transcationPurchasedToCheck(transaction.transactionIdentifier!, self.currentPayType)
+                if tx.original != nil && pendingOrderId == nil {
+                    completionHandle?(.renewSucceed, 0, activePayType)
+                } else if let txId = tx.transactionIdentifier {
+                    retryCounters[txId] = 0
+                    verifyTransaction(txId, payType: activePayType)
                 }
-                SKPaymentQueue.default().finishTransaction(transaction)
-                createOrderId = nil
-                
+                SKPaymentQueue.default().finishTransaction(tx)
+                pendingOrderId = nil
+
             case .failed:
-                SKPaymentQueue.default().finishTransaction(transaction)
-                self.completionHandle?(.failed, 0, currentPayType)
-                createOrderId = nil
+                SKPaymentQueue.default().finishTransaction(tx)
+                completionHandle?(.cancelled, 0, activePayType)
+                pendingOrderId = nil
 
             case .restored:
-                SKPaymentQueue.default().finishTransaction(transaction)
-                self.completionHandle?(.restored, 0, currentPayType)
-                createOrderId = nil
-                
+                SKPaymentQueue.default().finishTransaction(tx)
+                completionHandle?(.alreadyOwned, 0, activePayType)
+                pendingOrderId = nil
+
             case .deferred:
-                SKPaymentQueue.default().finishTransaction(transaction)
-                self.completionHandle?(.deferred, 0, currentPayType)
-                createOrderId = nil
-                
+                SKPaymentQueue.default().finishTransaction(tx)
+                completionHandle?(.deferred, 0, activePayType)
+                pendingOrderId = nil
+
             @unknown default:
-                SKPaymentQueue.default().finishTransaction(transaction)
-                self.completionHandle?(.unknow, 0, currentPayType)
-                createOrderId = nil
-                fatalError("Unknown transaction type")
+                SKPaymentQueue.default().finishTransaction(tx)
+                completionHandle?(.unknown, 0, activePayType)
+                pendingOrderId = nil
             }
         }
     }
- 
-    /// Server-side receipt verification flow
-    fileprivate func transcationPurchasedToCheck(_ transactionId: String, _ payType: ApplePayType) {
-        guard let receiptStr = getVerifyData(transactionId, payType) else {
-            self.completionHandle?(.verityFail, 0, payType)
+}
+
+// MARK: - Receipt Verification
+
+private extension AppleIAPManager {
+
+    func verifyTransaction(_ transactionId: String, payType: ApplePayType) {
+        guard let receipt = receiptData(for: transactionId, payType: payType) else {
+            completionHandle?(.verityFail, 0, payType)
             return
         }
 
-        // Cache payment info to prevent data loss on verification failure
-        if createOrderId != nil {
-            switch(payType) {
-            case .Pay:
-                if self.payCacheList.filter({$0["transactionId"] == transactionId || $0["orderId"] == createOrderId}).count == 0 {
-                    let cacheDict = ["transactionId": transactionId,
-                                     "orderId": createOrderId!,
-                                     "verifyData": receiptStr]
-                    self.payCacheList.append(cacheDict)
-                    let diskPath = self.getPayCachePath()
-                    NSKeyedArchiver.archiveRootObject(self.payCacheList, toFile: diskPath)
-                }
-                
-            case .Subscribe:
-                if self.subscribeCacheList.filter({$0["transactionId"] == transactionId || $0["orderId"] == createOrderId}).count == 0 {
-                    let cacheDict = ["transactionId": transactionId,
-                                     "orderId": createOrderId!,
-                                     "verifyData": receiptStr]
-                    self.subscribeCacheList.append(cacheDict)
-                    let diskPath = self.getSubscribeCachePath()
-                    NSKeyedArchiver.archiveRootObject(self.subscribeCacheList, toFile: diskPath)
-                }
-            }
+        // Persist transaction to disk in case verification needs retry
+        if let orderId = pendingOrderId {
+            persistTransaction(transactionId: transactionId, orderId: orderId, receipt: receipt, payType: payType)
         }
-        
-        // Limit retry count per transaction
-        var reqCount = reqRetryCountDict[transactionId] ?? 0
-        reqCount += 1
-        reqRetryCountDict[transactionId] = reqCount
-        if reqCount > APPLE_IAP_MAX_RETRY_COUNT {
-            self.completionHandle?(.verityFail, 0, payType)
+
+        // Enforce retry limit
+        var count = retryCounters[transactionId] ?? 0
+        count += 1
+        retryCounters[transactionId] = count
+        if count > kMaxVerificationRetries {
+            completionHandle?(.verityFail, 0, payType)
             return
         }
-        
-        // Send receipt to server for verification
-        switch(payType) {
+
+        // Upload receipt to server
+        let cache = payType == .Pay ? cachedPurchases : cachedSubscriptions
+        guard let params = cache.first(where: { $0["transactionId"] == transactionId }) else { return }
+
+        switch payType {
         case .Pay:
-            let paramsArr = self.payCacheList.filter({$0["transactionId"] == transactionId})
-            guard paramsArr.count > 0 else { return }
-            req_pay_uploadAppletransaction(transactionId, params: paramsArr.first!)
-            
+            uploadPurchaseReceipt(transactionId, params: params)
         case .Subscribe:
-            let paramsArr = self.subscribeCacheList.filter({$0["transactionId"] == transactionId})
-            guard paramsArr.count > 0 else { return }
-            req_subscribe_uploadAppletransaction(transactionId, params: paramsArr.first!)
+            uploadSubscriptionReceipt(transactionId, params: params)
         }
+    }
+
+    func uploadPurchaseReceipt(_ txId: String, params: [String: String]) {
+        let req = NetworkRequest()
+        req.endpoint = "mf/recharge/applePayNotify"
+        req.parameters = params
+        NetworkClient.post(request: req) { [weak self] ok, result, error in
+            guard let self = self else { return }
+            guard ok || error?.code == 405 else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    self.verifyTransaction(txId, payType: .Pay)
+                }
+                return
+            }
+            let revenue = (result as? [String: Any])?["reportMoney"] as? Double ?? 0
+            self.removeFromCache(transactionId: txId, payType: .Pay)
+            self.completionHandle?(.veritySucceed, revenue, .Pay)
+        }
+    }
+
+    func uploadSubscriptionReceipt(_ txId: String, params: [String: String]) {
+        let req = NetworkRequest()
+        req.endpoint = "mf/AutoSub/ApplePaySuccess"
+        req.parameters = params
+        NetworkClient.post(request: req) { [weak self] ok, result, error in
+            guard let self = self else { return }
+            guard ok || error?.code == 405 else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.verifyTransaction(txId, payType: .Subscribe)
+                }
+                return
+            }
+            let revenue = (result as? [String: Any])?["reportMoney"] as? Double ?? 0
+            self.removeFromCache(transactionId: txId, payType: .Subscribe)
+            self.completionHandle?(.veritySucceed, revenue, .Subscribe)
+        }
+    }
+}
+
+// MARK: - Disk Cache Management
+
+private extension AppleIAPManager {
+
+    func loadCachedData() {
+        cachedPurchases = readCache(payType: .Pay)
+        cachedSubscriptions = readCache(payType: .Subscribe)
+        pendingOrderId = nil
+    }
+
+    func readCache(payType: ApplePayType) -> [[String: String]] {
+        let path = cachePath(for: payType)
+        guard FileManager.default.fileExists(atPath: path) else { return [] }
+        if let list = NSKeyedUnarchiver.unarchiveObject(withFile: path) as? [[String: String]] {
+            return list
+        }
+        try? FileManager.default.removeItem(atPath: path)
+        return []
+    }
+
+    func persistTransaction(transactionId: String, orderId: String, receipt: String, payType: ApplePayType) {
+        var cache = payType == .Pay ? cachedPurchases : cachedSubscriptions
+        let isDuplicate = cache.contains { $0["transactionId"] == transactionId || $0["orderId"] == orderId }
+        guard !isDuplicate else { return }
+
+        let entry = ["transactionId": transactionId, "orderId": orderId, "verifyData": receipt]
+        cache.append(entry)
+
+        if payType == .Pay {
+            cachedPurchases = cache
+        } else {
+            cachedSubscriptions = cache
+        }
+        NSKeyedArchiver.archiveRootObject(cache, toFile: cachePath(for: payType))
+    }
+
+    func removeFromCache(transactionId: String, payType: ApplePayType) {
+        var cache = payType == .Pay ? cachedPurchases : cachedSubscriptions
+        cache.removeAll { $0["transactionId"] == transactionId }
+        NSKeyedArchiver.archiveRootObject(cache, toFile: cachePath(for: payType))
+
+        if payType == .Pay {
+            cachedPurchases = cache
+        } else {
+            cachedSubscriptions = cache
+        }
+    }
+
+    func cachePath(for payType: ApplePayType) -> String {
+        let docs = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first ?? ""
+        let dir = (docs as NSString).appendingPathComponent("App")
+        if !FileManager.default.fileExists(atPath: dir) {
+            try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        }
+        let filename = payType == .Pay ? "OrderTransactionInfo_Cache" : "OrderTransactionInfo_Subscribe_Cache"
+        return (dir as NSString).appendingPathComponent(filename)
+    }
+
+    func receiptData(for transactionId: String, payType: ApplePayType) -> String? {
+        let cache = payType == .Pay ? cachedPurchases : cachedSubscriptions
+        if let existing = cache.first(where: { $0["transactionId"] == transactionId })?["verifyData"] {
+            return existing
+        }
+        guard let receiptURL = Bundle.main.appStoreReceiptURL,
+              let data = try? Data(contentsOf: receiptURL) else {
+            return nil
+        }
+        return data.base64EncodedString()
     }
 }

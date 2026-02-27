@@ -1,167 +1,265 @@
-//
-//  IMView.swift
-//  taya
-//
-//  Created by Developer on 2025/10/28.
-//
-
 import SwiftUI
+import Combine
 
-struct IMView: View {
-    @ObservedObject var sessionManager: SessionManager
-    
-    var body: some View {
-        NavigationView {
-            List(sessionManager.conversations) { conversation in
-                NavigationLink(destination: ChatDetailView(user: conversation.user, sessionManager: sessionManager)) {
-                    HStack(spacing: 15) {
-                        AvatarView(username: conversation.user.username, size: 50, avatarName: conversation.user.avatarName)
-                            .overlay(Circle().stroke(Color.gray.opacity(0.3), lineWidth: 1))
-                        
-                        VStack(alignment: .leading, spacing: 5) {
-                            HStack {
-                                Text(conversation.user.username)
-                                    .font(.headline)
-                                Spacer()
-                                Text(conversation.time)
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                            
-                            HStack {
-                                Text(conversation.lastMessage)
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                    .lineLimit(1)
-                                Spacer()
-                                if conversation.unreadCount > 0 {
-                                    Text("\(conversation.unreadCount)")
-                                        .font(.caption)
-                                        .padding(6)
-                                        .background(Color.red)
-                                        .foregroundColor(.white)
-                                        .clipShape(Circle())
-                                }
-                            }
-                        }
-                    }
-                    .padding(.vertical, 5)
-                }
-            }
-            .navigationBarTitle("Notes 📝")
-        }
+// MARK: - Keyboard dismiss helper for iOS 13
+extension View {
+    func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
-struct ChatDetailView: View {
-    let user: User
-    @ObservedObject var sessionManager: SessionManager
-    @Environment(\.presentationMode) var presentationMode
-    @State private var showActionSheet = false
-    @State private var showReportAlert = false
-    @State private var messageText = ""
-    
-    var messages: [Message] {
-        sessionManager.conversations.first(where: { $0.user.id == user.id })?.messages ?? []
+/// Manages chat data with persistence via UserDefaults.
+class ChatManager: ObservableObject {
+    static let shared = ChatManager()
+
+    @Published var conversations: [ChatConversation] = []
+
+    private let storageKey = "taya_chat_conversations"
+
+    private init() {
+        loadConversations()
     }
-    
+
+    /// Load conversations from storage, or use sample data if none saved
+    func loadConversations() {
+        if let data = UserDefaults.standard.data(forKey: storageKey),
+           let saved = try? JSONDecoder().decode([ChatConversation].self, from: data) {
+            conversations = saved
+        } else {
+            conversations = SampleData.conversations
+        }
+    }
+
+    /// Save current conversations to storage
+    func saveConversations() {
+        if let data = try? JSONEncoder().encode(conversations) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
+    }
+
+    /// Add a message to a conversation
+    func addMessage(to conversationId: UUID, message: ChatMessage) {
+        if let index = conversations.firstIndex(where: { $0.id == conversationId }) {
+            conversations[index].messages.append(message)
+            conversations[index].lastMessage = message.content
+            conversations[index].timeLabel = "Just now"
+            saveConversations()
+        }
+    }
+
+    /// Get messages for a conversation
+    func messages(for conversationId: UUID) -> [ChatMessage] {
+        conversations.first(where: { $0.id == conversationId })?.messages ?? []
+    }
+
+    /// Remove a conversation (block)
+    func removeConversation(_ convoId: UUID) {
+        conversations.removeAll { $0.id == convoId }
+        saveConversations()
+    }
+
+    /// Reset all chat data (for account deletion)
+    func resetAllData() {
+        conversations = SampleData.conversations
+        UserDefaults.standard.removeObject(forKey: storageKey)
+    }
+}
+
+// MARK: - Chat List View
+
+/// "Chat" tab — lifestyle community messaging.
+struct IMView: View {
+    @ObservedObject var sessionManager: SessionManager
+    @ObservedObject var chatManager = ChatManager.shared
+    @State private var selectedConversation: ChatConversation? = nil
+    @State private var showBlockAlert = false
+    @State private var blockTarget: ChatConversation? = nil
+
     var body: some View {
-        ZStack {
-            VStack {
-                // Custom Header for Chat
-                HStack {
-                    AvatarView(username: user.username, size: 40, avatarName: user.avatarName)
-                    Text(user.username)
-                        .font(.headline)
-                    Spacer()
-                }
-                .padding()
-                .background(Color(UIColor.secondarySystemBackground))
-                
-                ScrollView {
-                    VStack(spacing: 15) {
-                        ForEach(messages) { message in
+        NavigationView {
+            List {
+                ForEach(chatManager.conversations) { convo in
+                    Button(action: {
+                        self.selectedConversation = convo
+                    }) {
+                        conversationRow(convo)
+                    }
+                    .contextMenu {
+                        Button(action: {
+                            blockTarget = convo
+                            showBlockAlert = true
+                        }) {
                             HStack {
-                                if message.isCurrentUser {
-                                    Spacer()
-                                    Text(message.content)
-                                        .padding()
-                                        .background(Color.blue)
-                                        .foregroundColor(.white)
-                                        .cornerRadius(15)
-                                } else {
-                                    Text(message.content)
-                                        .padding()
-                                        .background(Color.gray.opacity(0.2))
-                                        .foregroundColor(.primary)
-                                        .cornerRadius(15)
-                                    Spacer()
-                                }
+                                Image(systemName: "flag.fill")
+                                Text("Report & Block")
                             }
-                            .padding(.horizontal)
                         }
                     }
-                    .padding(.top)
                 }
-                
-                HStack {
-                    TextField("Add a note...", text: $messageText)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
-                    Button(action: sendMessage) {
-                        Image(systemName: "paperplane.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.blue)
-                    }
-                }
-                .padding()
-                .background(Color(UIColor.systemBackground))
             }
+            .listStyle(GroupedListStyle())
+            .navigationBarTitle("Chat")
         }
-        .onTapGesture {
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        .navigationViewStyle(StackNavigationViewStyle())
+        .sheet(item: $selectedConversation) { convo in
+            ChatDetailView(conversationId: convo.id, contactName: convo.contact.displayName, contactIcon: convo.contact.avatarIcon)
         }
-        .navigationBarTitle(Text(""), displayMode: .inline)
-        .navigationBarItems(trailing: Button(action: {
-            showActionSheet = true
-        }) {
-            Image(systemName: "ellipsis")
-                .foregroundColor(.primary)
-                .padding()
-        })
-        .sheet(isPresented: $showActionSheet) {
-            ActionMenuSheet(
-                user: user,
-                sessionManager: sessionManager,
-                onReport: {
-                    sessionManager.reportUser(user)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showReportAlert = true
+        .alert(isPresented: $showBlockAlert) {
+            Alert(
+                title: Text("Report & Block"),
+                message: Text("This user will be blocked and reported. Are you sure?"),
+                primaryButton: .destructive(Text("Block")) {
+                    if let target = blockTarget {
+                        chatManager.removeConversation(target.id)
                     }
                 },
-                onBlock: {
-                    sessionManager.blockUser(user)
-                    presentationMode.wrappedValue.dismiss()
+                secondaryButton: .cancel()
+            )
+        }
+    }
+
+    private func conversationRow(_ convo: ChatConversation) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color(red: 0.36, green: 0.72, blue: 0.66).opacity(0.15))
+                    .frame(width: 48, height: 48)
+                Image(systemName: convo.contact.avatarIcon)
+                    .font(.system(size: 22))
+                    .foregroundColor(Color(red: 0.36, green: 0.72, blue: 0.66))
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(convo.contact.displayName)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Text(convo.timeLabel)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Text(convo.lastMessage)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Chat Detail View
+
+struct ChatDetailView: View {
+    let conversationId: UUID
+    let contactName: String
+    let contactIcon: String
+
+    @ObservedObject var chatManager = ChatManager.shared
+    @State private var newMessage = ""
+    @State private var showActions = false
+    @Environment(\.presentationMode) var presentationMode
+
+    private var messages: [ChatMessage] {
+        chatManager.messages(for: conversationId)
+    }
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Messages
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(messages) { msg in
+                            chatBubble(msg)
+                        }
+                    }
+                    .padding()
+                }
+                .onTapGesture {
+                    hideKeyboard()
+                }
+
+                Divider()
+
+                inputBar
+            }
+            .navigationBarTitle(contactName)
+            .navigationBarItems(
+                leading: Button("Back") { presentationMode.wrappedValue.dismiss() },
+                trailing: Button(action: { showActions = true }) {
+                    Image(systemName: "ellipsis.circle")
                 }
             )
         }
-        .alert(isPresented: $showReportAlert) {
-            Alert(title: Text("Report Submitted"), message: Text("Thank you for reporting. We will investigate this user."), dismissButton: .default(Text("OK")))
-        }
-        .onAppear {
-            sessionManager.markConversationAsRead(user: user)
+        .navigationViewStyle(StackNavigationViewStyle())
+        .actionSheet(isPresented: $showActions) {
+            ActionSheet(title: Text("Options"), buttons: [
+                .destructive(Text("Report User")) {},
+                .destructive(Text("Block User")) {
+                    chatManager.removeConversation(conversationId)
+                    presentationMode.wrappedValue.dismiss()
+                },
+                .cancel()
+            ])
         }
     }
-    
-    func sendMessage() {
-        guard !messageText.isEmpty else { return }
-        sessionManager.sendMessage(to: user, content: messageText)
-        messageText = ""
-    }
-}
 
-struct IMView_Previews: PreviewProvider {
-    static var previews: some View {
-        IMView(sessionManager: SessionManager())
+    private var inputBar: some View {
+        HStack(spacing: 10) {
+            TextField("Type a message...", text: $newMessage)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .font(.body)
+
+            Button(action: sendMessage) {
+                Image(systemName: "paperplane.fill")
+                    .foregroundColor(newMessage.isEmpty ? .secondary : Color(red: 0.36, green: 0.72, blue: 0.66))
+            }
+            .disabled(newMessage.isEmpty)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+    }
+
+    private func chatBubble(_ msg: ChatMessage) -> some View {
+        HStack {
+            if msg.isFromMe { Spacer() }
+
+            VStack(alignment: msg.isFromMe ? .trailing : .leading, spacing: 2) {
+                Text(msg.content)
+                    .font(.body)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(msg.isFromMe
+                        ? Color(red: 0.36, green: 0.72, blue: 0.66)
+                        : Color(UIColor.secondarySystemGroupedBackground))
+                    .foregroundColor(msg.isFromMe ? .white : .primary)
+                    .cornerRadius(16)
+
+                Text(formatTime(msg.timestamp))
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+
+            if !msg.isFromMe { Spacer() }
+        }
+    }
+
+    private func sendMessage() {
+        let text = newMessage.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return }
+
+        let msg = ChatMessage(content: text, isFromMe: true, timestamp: Date())
+        chatManager.addMessage(to: conversationId, message: msg)
+        newMessage = ""
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 }

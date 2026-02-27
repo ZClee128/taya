@@ -1,78 +1,48 @@
-//
-//  ActionMenuSheet.swift
-//  taya
-//
-//  Created by Developer on 2025/10/20.
-//
-
 import SwiftUI
 
+/// Context menu action sheet with Report, Share, and Bookmark options.
 struct ActionMenuSheet: View {
-    let user: User
-    @ObservedObject var sessionManager: SessionManager
-    var onReport: () -> Void
-    var onBlock: () -> Void
+    var onReport: (() -> Void)?
+    var onShare: (() -> Void)?
+    var onBookmark: (() -> Void)?
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
-
         VStack(spacing: 0) {
-            Text("Options")
-                .font(.headline)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color(UIColor.secondarySystemBackground))
-            
-            Divider()
-            
-            Button(action: {
-                onBlock()
-                presentationMode.wrappedValue.dismiss()
-            }) {
-                HStack {
-                    Text("Block User")
-                        .foregroundColor(.red)
-                    Spacer()
-                    Image(systemName: "hand.raised.fill")
-                        .foregroundColor(.red)
-                }
-                .padding()
+            if let onBookmark = onBookmark {
+                menuButton(icon: "bookmark", title: "Bookmark", action: onBookmark)
+                Divider()
             }
-            
-            Divider()
-            
-            Button(action: {
-                onReport()
-                presentationMode.wrappedValue.dismiss()
-            }) {
-                HStack {
-                    Text("Report User/Post")
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Image(systemName: "exclamationmark.bubble")
-                        .foregroundColor(.primary)
-                }
-                .padding()
+            if let onShare = onShare {
+                menuButton(icon: "square.and.arrow.up", title: "Share", action: onShare)
+                Divider()
             }
-            
-            Divider()
-            
-            Spacer()
-            
-            Button(action: {
+            if let onReport = onReport {
+                menuButton(icon: "flag", title: "Report", color: .red, action: onReport)
+                Divider()
+            }
+            menuButton(icon: "xmark", title: "Cancel") {
                 presentationMode.wrappedValue.dismiss()
-            }) {
-                Text("Cancel")
-                    .font(.headline)
-                    .foregroundColor(.blue)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(10)
+            }
+        }
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(14)
+        .padding()
+    }
+
+    private func menuButton(icon: String, title: String, color: Color = .primary, action: @escaping () -> Void) -> some View {
+        Button(action: {
+            action()
+            presentationMode.wrappedValue.dismiss()
+        }) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(color)
+                Text(title)
+                    .foregroundColor(color)
+                Spacer()
             }
             .padding()
         }
-        .background(Color(UIColor.systemBackground))
     }
-
 }

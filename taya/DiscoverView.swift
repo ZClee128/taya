@@ -1,492 +1,273 @@
-//
-//  DiscoverView.swift
-//  taya
-//
-//  Created by Developer on 2025/10/22.
-//
-
 import SwiftUI
 
+/// "Discover" tab — browse lifestyle content by category.
 struct DiscoverView: View {
-    let categories: [Category] = MockData.categories
     @ObservedObject var sessionManager: SessionManager
     @State private var searchText = ""
-    
-    // iOS 13 compatible grid approach
-    func chunkedCategories() -> [[Category]] {
-        var chunks: [[Category]] = []
-        let columnCount = 2
-        for i in stride(from: 0, to: filteredCategories.count, by: columnCount) {
-            let end = min(i + columnCount, filteredCategories.count)
-            let chunk = Array(filteredCategories[i..<end])
-            chunks.append(chunk)
-        }
-        return chunks
-    }
-    
-    // Mock trending posts
-    var trendingPosts: [Post] {
-        let posts = MockData.posts.sorted { $0.likes > $1.likes }.prefix(5).map { $0 }
-        if searchText.isEmpty {
-            return posts
-        }
-        return posts.filter { post in
-            post.description.localizedCaseInsensitiveContains(searchText) ||
-            post.user.username.localizedCaseInsensitiveContains(searchText) ||
-            (post.categoryName ?? "").localizedCaseInsensitiveContains(searchText)
-        }
-    }
-    
-    // Filtered categories based on search
-    var filteredCategories: [Category] {
-        if searchText.isEmpty {
-            return categories
-        }
-        return categories.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-    }
-    
-    // Search results: posts matching search text
-    var searchResults: [Post] {
-        guard !searchText.isEmpty else { return [] }
-        return MockData.posts.filter { post in
-            // Exclude blocked users
-            if sessionManager.blockedUserIds.contains(post.user.id) {
-                return false
-            }
-            return post.description.localizedCaseInsensitiveContains(searchText) ||
-                   post.user.username.localizedCaseInsensitiveContains(searchText) ||
-                   (post.categoryName ?? "").localizedCaseInsensitiveContains(searchText)
-        }
-    }
-    
+    @State private var selectedCategory: String? = nil
+    @State private var selectedTip: LifestyleTip? = nil
+    @State private var showReport = false
+    @State private var reportTarget: LifestyleTip? = nil
+
+    private let categories = SampleData.categories
+    private let allTips = SampleData.tips
+
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    
-                    // Search Bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
-                        TextField("Search stars, planets, users...", text: $searchText)
-                        if !searchText.isEmpty {
-                            Button(action: { searchText = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                    .padding(12)
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    
-                    if searchText.isEmpty {
-                        // === Normal Discover View ===
-                        
-                        // Trending Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Popular Observations 🔥")
-                                .font(.headline)
-                                .padding(.horizontal)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 15) {
-                                    ForEach(trendingPosts) { post in
-                                        NavigationLink(destination: PostDetailView(post: post, sessionManager: sessionManager)) {
-                                            TrendingPostCard(post: post)
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                    }
-                                }
-                                .padding(.horizontal)
-                            }
-                        }
-                        
-                        // Categories Grid
-                        VStack(alignment: .leading, spacing: 12) {
-                            if #available(iOS 14.0, *) {
-                                Text("Explore Collections")
-                                    .font(.title2)
-                                    .bold()
-                                    .padding(.horizontal)
-                            } else {
-                                // Fallback on earlier versions
-                            }
-                            
-                            VStack(spacing: 15) {
-                                ForEach(chunkedCategories(), id: \.self) { rowCategories in
-                                    HStack(spacing: 15) {
-                                        ForEach(rowCategories) { category in
-                                            NavigationLink(destination: CategoryFeedView(category: category, sessionManager: sessionManager)) {
-                                                CategoryGridCard(category: category)
-                                            }
-                                            .buttonStyle(PlainButtonStyle())
-                                        }
-                                        if rowCategories.count < 2 {
-                                            Spacer()
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                    } else {
-                        // === Search Results View ===
-                        VStack(alignment: .leading, spacing: 12) {
-                            // Category matches
-                            if !filteredCategories.isEmpty {
-                                Text("Collections")
-                                    .font(.headline)
-                                    .padding(.horizontal)
-                                
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach(filteredCategories) { category in
-                                            NavigationLink(destination: CategoryFeedView(category: category, sessionManager: sessionManager)) {
-                                                HStack(spacing: 8) {
-                                                    Image(systemName: category.iconName)
-                                                        .foregroundColor(.white)
-                                                    Text(category.name)
-                                                        .foregroundColor(.white)
-                                                        .font(.subheadline)
-                                                        .bold()
-                                                }
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 10)
-                                                .background(Color.blue.opacity(0.8))
-                                                .cornerRadius(20)
-                                            }
-                                            .buttonStyle(PlainButtonStyle())
-                                        }
-                                    }
-                                    .padding(.horizontal)
-                                }
-                            }
-                            
-                            // Post matches
-                            if !searchResults.isEmpty {
-                                Text("Posts (\(searchResults.count))")
-                                    .font(.headline)
-                                    .padding(.horizontal)
-                                    .padding(.top, 8)
-                                
-                                ForEach(searchResults) { post in
-                                    NavigationLink(destination: PostDetailView(post: post, sessionManager: sessionManager)) {
-                                        SearchResultRow(post: post)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                                .padding(.horizontal)
-                            }
-                            
-                            if filteredCategories.isEmpty && searchResults.isEmpty {
-                                VStack(spacing: 12) {
-                                    Image(systemName: "magnifyingglass")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.gray)
-                                    Text("No results for \"\(searchText)\"")
-                                        .font(.headline)
-                                        .foregroundColor(.secondary)
-                                    Text("Try a different keyword")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.top, 60)
-                            }
-                        }
-                    }
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    searchBar
+                    categoryGrid
+                    trendingSection
+                    allContentSection
                 }
-                .padding(.bottom, 20)
+                .padding(.bottom, 30)
             }
-            .navigationBarTitle("Learn 🔭", displayMode: .automatic)
+            .background(Color(UIColor.systemGroupedBackground))
+            .navigationBarTitle("Discover")
         }
-    }
-}
-
-// MARK: - Trending Post Card
-
-struct TrendingPostCard: View {
-    let post: Post
-    
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Try to load the image from assets or bundle
-            Group {
-                if let uiImage = UIImage(named: post.imageName) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpeg"), let uiImage = UIImage(contentsOfFile: path) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else if let path = Bundle.main.path(forResource: post.imageName, ofType: "jpg"), let uiImage = UIImage(contentsOfFile: path) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    // Fallback: gradient background with SF Symbol
-                    ZStack {
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color(hex: "2c3e50"),
-                                Color(hex: "3498db")
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        Image(systemName: post.imageName)
-                            .font(.system(size: 40))
-                            .foregroundColor(.white.opacity(0.6))
-                    }
-                }
-            }
-            .frame(width: 160, height: 200)
-            .clipped()
-            
-            // Gradient Overlay
-            LinearGradient(
-                gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-                startPoint: .center,
-                endPoint: .bottom
+        .navigationViewStyle(StackNavigationViewStyle())
+        .sheet(item: $selectedTip) { tip in
+            PostDetailView(tip: tip)
+        }
+        .alert(isPresented: $showReport) {
+            Alert(
+                title: Text("Report Content"),
+                message: Text("Are you sure you want to report this content as inappropriate?"),
+                primaryButton: .destructive(Text("Report")) { reportTarget = nil },
+                secondaryButton: .cancel()
             )
-            
-            // Text
-            VStack(alignment: .leading, spacing: 4) {
-                Text(post.description)
-                    .font(.caption)
-                    .foregroundColor(.white)
-                    .lineLimit(2)
-                
-                HStack(spacing: 4) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 10))
-                    if #available(iOS 14.0, *) {
-                        Text("\(post.likes)")
-                            .font(.caption2)
-                    } else {
-                        // Fallback on earlier versions
-                    }
-                }
-                .foregroundColor(.white.opacity(0.8))
-            }
-            .padding(10)
         }
-        .frame(width: 160, height: 200)
-        .cornerRadius(14)
-        .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
     }
-}
 
-// MARK: - Search Result Row
+    // MARK: - Search
 
-struct SearchResultRow: View {
-    let post: Post
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Thumbnail
-            Group {
-                if let uiImage = UIImage(named: post.imageName) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    ZStack {
-                        Color(hex: "2c3e50")
-                        Image(systemName: post.imageName)
-                            .font(.system(size: 20))
-                            .foregroundColor(.white.opacity(0.7))
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+            TextField("Search lifestyle tips...", text: $searchText)
+                .font(.body)
+        }
+        .padding(12)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(12)
+        .padding(.horizontal)
+        .padding(.top, 4)
+    }
+
+    // MARK: - Category Grid
+
+    private var categoryGrid: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Categories")
+                .font(.headline)
+                .padding(.horizontal)
+
+            VStack(spacing: 12) {
+                ForEach(0..<2, id: \.self) { row in
+                    HStack(spacing: 12) {
+                        ForEach(0..<3, id: \.self) { col in
+                            let index = row * 3 + col
+                            if index < self.categories.count {
+                                self.categoryButton(self.categories[index])
+                            }
+                        }
                     }
                 }
             }
-            .frame(width: 60, height: 60)
-            .cornerRadius(10)
-            .clipped()
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(post.user.username)
-                    .font(.subheadline)
-                    .bold()
-                    .foregroundColor(.primary)
-                Text(post.description)
+            .padding(.horizontal)
+        }
+    }
+
+    private func categoryButton(_ cat: LifestyleCategory) -> some View {
+        Button(action: {
+            if self.selectedCategory == cat.name {
+                self.selectedCategory = nil
+            } else {
+                self.selectedCategory = cat.name
+            }
+        }) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(hexColor(cat.color).opacity(selectedCategory == cat.name ? 0.3 : 0.12))
+                        .frame(width: 52, height: 52)
+                    Image(systemName: cat.iconName)
+                        .font(.system(size: 22))
+                        .foregroundColor(hexColor(cat.color))
+                }
+                Text(cat.name)
+                    .font(.caption)
+                    .foregroundColor(selectedCategory == cat.name ? hexColor(cat.color) : .secondary)
+                    .fontWeight(selectedCategory == cat.name ? .bold : .regular)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: - Trending
+
+    private var trendingSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Trending 🔥")
+                .font(.headline)
+                .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    ForEach(filteredTips.sorted(by: { $0.likes > $1.likes }).prefix(4)) { tip in
+                        Button(action: {
+                            self.selectedTip = tip
+                        }) {
+                            trendingCard(tip)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    private func trendingCard(_ tip: LifestyleTip) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(categoryColorForTip(tip).opacity(0.15))
+                    .frame(width: 160, height: 100)
+                Image(systemName: tip.iconName)
+                    .font(.system(size: 32))
+                    .foregroundColor(categoryColorForTip(tip))
+            }
+            Text(tip.title)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+                .lineLimit(2)
+                .frame(width: 160, alignment: .leading)
+            HStack(spacing: 4) {
+                Image(systemName: "heart.fill")
+                    .font(.caption)
+                    .foregroundColor(.red)
+                Text("\(tip.likes)")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(2)
-                HStack(spacing: 4) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.red)
-                    if #available(iOS 14.0, *) {
-                        Text("\(post.likes)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    } else {
-                        // Fallback on earlier versions
-                    }
-                    if let cat = post.categoryName {
-                        if #available(iOS 14.0, *) {
-                            Text("• \(cat)")
-                                .font(.caption2)
+            }
+        }
+    }
+
+    // MARK: - All Content
+
+    private var allContentSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(selectedCategory ?? "All Tips")
+                    .font(.headline)
+                if selectedCategory != nil {
+                    Button("Clear") { self.selectedCategory = nil }
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+                Spacer()
+            }
+            .padding(.horizontal)
+
+            ForEach(filteredTips) { tip in
+                contentRow(tip)
+            }
+        }
+    }
+
+    private func contentRow(_ tip: LifestyleTip) -> some View {
+        Button(action: {
+            self.selectedTip = tip
+        }) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(categoryColorForTip(tip).opacity(0.12))
+                        .frame(width: 60, height: 60)
+                    Image(systemName: tip.iconName)
+                        .font(.system(size: 24))
+                        .foregroundColor(categoryColorForTip(tip))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(tip.title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    Text(tip.summary)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                    HStack(spacing: 8) {
+                        HStack(spacing: 2) {
+                            Image(systemName: "tag")
+                                .font(.caption)
+                            Text(tip.category)
+                                .font(.caption)
+                        }
+                        .foregroundColor(.secondary)
+                        Spacer()
+                        Button(action: {
+                            self.reportTarget = tip
+                            self.showReport = true
+                        }) {
+                            Image(systemName: "flag")
+                                .font(.caption)
                                 .foregroundColor(.secondary)
-                        } else {
-                            // Fallback on earlier versions
                         }
                     }
                 }
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(.gray)
-                .font(.caption)
+            .padding()
+            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .cornerRadius(12)
+            .padding(.horizontal)
         }
-        .padding(.vertical, 8)
-    }
-}
-
-// MARK: - Category Grid Card
-
-struct CategoryGridCard: View {
-    let category: Category
-    
-    var gradient: LinearGradient {
-        switch category.name {
-        case "Planets": return LinearGradient(gradient: Gradient(colors: [Color(hex: "355C7D"), Color(hex: "6C5B7B")]), startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "Galaxies": return LinearGradient(gradient: Gradient(colors: [Color(hex: "4e54c8"), Color(hex: "8f94fb")]), startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "Stars": return LinearGradient(gradient: Gradient(colors: [Color(hex: "FC466B"), Color(hex: "3F5EFB")]), startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "Nebulas": return LinearGradient(gradient: Gradient(colors: [Color(hex: "11998e"), Color(hex: "38ef7d")]), startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "Events": return LinearGradient(gradient: Gradient(colors: [Color(hex: "00b09b"), Color(hex: "96c93d")]), startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "Equipment": return LinearGradient(gradient: Gradient(colors: [Color(hex: "800080"), Color(hex: "ffc0cb")]), startPoint: .topLeading, endPoint: .bottomTrailing)
-        default: return LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
+        .buttonStyle(PlainButtonStyle())
     }
 
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Rectangle()
-                .fill(gradient)
-                .frame(height: 120)
-                .cornerRadius(16)
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 5)
-            
-            VStack(alignment: .leading) {
-                Image(systemName: category.iconName)
-                    .font(.system(size: 30))
-                    .foregroundColor(.white.opacity(0.9))
-                    .padding(.bottom, 5)
-                
-                Text(category.name)
-                    .font(.headline)
-                    .foregroundColor(.white)
+    // MARK: - Helpers
+
+    private var filteredTips: [LifestyleTip] {
+        var result = allTips
+        if let cat = selectedCategory {
+            result = result.filter { $0.category == cat }
+        }
+        if !searchText.isEmpty {
+            result = result.filter {
+                $0.title.localizedCaseInsensitiveContains(searchText) ||
+                $0.summary.localizedCaseInsensitiveContains(searchText) ||
+                $0.category.localizedCaseInsensitiveContains(searchText)
             }
-            .padding(15)
         }
+        return result
     }
-}
 
-// MARK: - Hex Color Helper
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3:
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6:
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8:
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
+    private func categoryColorForTip(_ tip: LifestyleTip) -> Color {
+        if let cat = categories.first(where: { $0.name == tip.category }) {
+            return hexColor(cat.color)
         }
+        return .gray
+    }
 
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue:  Double(b) / 255,
-            opacity: Double(a) / 255
+    private func hexColor(_ hex: String) -> Color {
+        let cleaned = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        var rgb: UInt64 = 0
+        Scanner(string: cleaned).scanHexInt64(&rgb)
+        return Color(
+            red: Double((rgb >> 16) & 0xFF) / 255,
+            green: Double((rgb >> 8) & 0xFF) / 255,
+            blue: Double(rgb & 0xFF) / 255
         )
-    }
-}
-
-// MARK: - Category Feed View
-
-struct CategoryFeedView: View {
-    let category: Category
-    @ObservedObject var sessionManager: SessionManager
-    
-    var posts: [Post] {
-        let filtered = MockData.posts.filter { post in
-            if sessionManager.blockedUserIds.contains(post.user.id) {
-                return false
-            }
-            return post.categoryName == category.name
-        }
-        return filtered
-    }
-    
-    @State private var showActionSheet = false
-    @State private var showReportAlert = false
-    @State private var selectedPost: Post?
-    @State private var postToShare: Post?
-
-    var body: some View {
-        List(posts) { post in
-            PostCell(post: post, onAction: {
-                self.selectedPost = post
-            }, onShare: {
-                self.postToShare = post
-            })
-            .background(
-                NavigationLink(destination: PostDetailView(post: post, sessionManager: sessionManager)) {
-                    EmptyView()
-                }
-                .opacity(0)
-            )
-            .buttonStyle(PlainButtonStyle())
-        }
-        .navigationBarTitle(category.name)
-        .sheet(item: $selectedPost) { post in
-            ActionMenuSheet(
-                user: post.user,
-                sessionManager: sessionManager,
-                onReport: {
-                    sessionManager.reportUser(post.user)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showReportAlert = true
-                    }
-                },
-                onBlock: {
-                    sessionManager.blockUser(post.user)
-                }
-            )
-        }
-        .background(EmptyView().sheet(item: $postToShare) { post in
-            ShareSheet(activityItems: ["Check out this post by \(post.user.username): \(post.description)"])
-        })
-        .alert(isPresented: $showReportAlert) {
-            Alert(title: Text("Report Submitted"), message: Text("Thank you for reporting. This post will be reviewed."), dismissButton: .default(Text("OK")))
-        }
-    }
-}
-
-// Helper to make [[Category]] Hashable for ForEach id
-extension Array: Identifiable where Element: Identifiable {
-    public var id: String {
-        self.map { "\($0.id)" }.joined(separator: ",")
-    }
-}
-
-struct DiscoverView_Previews: PreviewProvider {
-    static var previews: some View {
-        DiscoverView(sessionManager: SessionManager())
     }
 }

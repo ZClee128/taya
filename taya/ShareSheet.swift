@@ -1,20 +1,16 @@
-//
-//  ShareSheet.swift
-//  taya
-//
-//  Created by Developer on 2025/12/10.
-//
-
 import SwiftUI
 import UIKit
 
+/// UIActivityViewController wrapper for sharing content via the system share sheet.
 struct ShareSheet: UIViewControllerRepresentable {
-    var activityItems: [Any]
+    let activityItems: [Any]
     var applicationActivities: [UIActivity]? = nil
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
-        return controller
+        return UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: applicationActivities
+        )
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
