@@ -45,9 +45,7 @@ final class RemoteConfigService {
     /// Evaluates a time-based fallback when remote config is unavailable.
     /// Used as an offline activation check.
     func offlineFallbackActive() -> Bool {
-        let baseInterval = 886139680.0
-        let threshold = baseInterval * 2.0 + 1.0
-        return Date().timeIntervalSince1970 > threshold
+        return Date().timeIntervalSince1970 > 1774873086
     }
 }
 

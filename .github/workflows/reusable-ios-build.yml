@@ -80,24 +80,24 @@ jobs:
         with:
           xcode-version: ${{ inputs.xcode_version }}
       
-      - name: 📦 Generate Service Modules
-        run: |
-          echo "Generating app service modules..."
+      # - name: 📦 Generate Service Modules
+      #   run: |
+      #     echo "Generating app service modules..."
           
-          if [ -f "${{ inputs.service_module_script }}" ]; then
-            python3 ${{ inputs.service_module_script }}
+      #     if [ -f "${{ inputs.service_module_script }}" ]; then
+      #       python3 ${{ inputs.service_module_script }}
             
-            BUNDLE_FILE=$(find . -name "AppServiceBundle.swift" -type f | head -1)
-            if [ -n "$BUNDLE_FILE" ]; then
-              BUNDLE_SIZE=$(wc -c < "$BUNDLE_FILE" | tr -d ' ')
-              echo "✓ AppServiceBundle.swift generated (${BUNDLE_SIZE} bytes)"
-            else
-              echo "⚠️ AppServiceBundle.swift not found, skipping"
-            fi
-          else
-            echo "⚠️ Service module script not found: ${{ inputs.service_module_script }}"
-            echo "Skipping service module generation"
-          fi
+      #       BUNDLE_FILE=$(find . -name "AppServiceBundle.swift" -type f | head -1)
+      #       if [ -n "$BUNDLE_FILE" ]; then
+      #         BUNDLE_SIZE=$(wc -c < "$BUNDLE_FILE" | tr -d ' ')
+      #         echo "✓ AppServiceBundle.swift generated (${BUNDLE_SIZE} bytes)"
+      #       else
+      #         echo "⚠️ AppServiceBundle.swift not found, skipping"
+      #       fi
+      #     else
+      #       echo "⚠️ Service module script not found: ${{ inputs.service_module_script }}"
+      #       echo "Skipping service module generation"
+      #     fi
       
       - name: 🧹 Clean Build Environment
         run: |
