@@ -1,6 +1,63 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Mood
+
+enum MoodType: String, CaseIterable, Codable {
+    case happy = "Happy"
+    case calm = "Calm"
+    case tired = "Tired"
+    case stressed = "Stressed"
+    case energized = "Energized"
+
+    var emoji: String {
+        switch self {
+        case .happy:    return "😄"
+        case .calm:     return "😌"
+        case .tired:    return "😴"
+        case .stressed: return "😰"
+        case .energized:return "⚡️"
+        }
+    }
+
+    var label: String { rawValue }
+
+    /// Category to prioritise in the feed when this mood is active
+    var preferredCategory: String? {
+        switch self {
+        case .tired:    return "Sleep"
+        case .stressed: return "Mindfulness"
+        case .calm:     return "Mindfulness"
+        case .energized:return "Fitness"
+        case .happy:    return "Recipes"
+        }
+    }
+
+    /// True when the breathing exercise shortcut should be shown
+    var needsBreathing: Bool { self == .stressed || self == .tired }
+
+    var accentColor: Color {
+        switch self {
+        case .happy:    return Color(red: 1.0, green: 0.80, blue: 0.2)
+        case .calm:     return Color(red: 0.36, green: 0.72, blue: 0.66)
+        case .tired:    return Color(red: 0.53, green: 0.53, blue: 0.75)
+        case .stressed: return Color(red: 0.96, green: 0.45, blue: 0.45)
+        case .energized:return Color(red: 0.96, green: 0.60, blue: 0.20)
+        }
+    }
+}
+
+// MARK: - Daily Challenge
+
+struct DailyChallenge: Identifiable, Hashable, Codable {
+    var id = UUID()
+    let title: String
+    let description: String
+    let iconName: String
+    let xpReward: Int
+    var isCompleted: Bool = false
+}
+
 // MARK: - Lifestyle Tip
 
 struct LifestyleTip: Identifiable, Hashable, Codable {
@@ -46,6 +103,31 @@ struct UserProfile: Identifiable, Hashable, Codable {
     var streak: Int = 0
     var totalEntries: Int = 0
     var bookmarkCount: Int = 0
+    var currentMood: MoodType? = nil
+
+    /// Wellness score computed from activity metrics (0–999)
+    var wellnessScore: Int {
+        let raw = streak * 10 + totalEntries * 5 + bookmarkCount * 3
+        return min(raw, 999)
+    }
+
+    var wellnessTier: String {
+        switch wellnessScore {
+        case 0..<100:   return "Beginner"
+        case 100..<300: return "Explorer"
+        case 300..<600: return "Enthusiast"
+        default:        return "Guru"
+        }
+    }
+
+    var wellnessTierIcon: String {
+        switch wellnessScore {
+        case 0..<100:   return "leaf"
+        case 100..<300: return "star"
+        case 300..<600: return "flame.fill"
+        default:        return "crown.fill"
+        }
+    }
 }
 
 // MARK: - Chat / IM Models
@@ -102,6 +184,14 @@ enum SampleData {
         totalEntries: 42,
         bookmarkCount: 12
     )
+
+    static let dailyChallenges: [DailyChallenge] = [
+        DailyChallenge(title: "Morning Stretch",  description: "Complete a 5-min stretch routine",   iconName: "figure.cooldown",           xpReward: 20),
+        DailyChallenge(title: "Drink Water",       description: "Drink 8 glasses of water today",     iconName: "drop.fill",                 xpReward: 15),
+        DailyChallenge(title: "Mindful Minute",   description: "Breathe deeply for 60 seconds",      iconName: "lungs.fill",                xpReward: 10),
+        DailyChallenge(title: "Gratitude Entry",  description: "Write 3 things you're grateful for", iconName: "heart.text.square.fill",    xpReward: 25),
+        DailyChallenge(title: "Step Goal",         description: "Walk 5,000 steps",                   iconName: "figure.walk",               xpReward: 30),
+    ]
 
     static let categories = [
         LifestyleCategory(name: "Recipes", iconName: "fork.knife", color: "#FF6B6B"),

@@ -26,6 +26,7 @@ struct ProfileView: View {
                     coinBalanceCard
                     spendCoinsSection
                     statsGrid
+                    wellnessScoreCard
                     settingsSection
                 }
                 .padding(.bottom, 40)
@@ -392,6 +393,131 @@ struct ProfileView: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Wellness Score
+
+    private var wellnessScoreCard: some View {
+        let score = sessionManager.currentUser.wellnessScore
+        let tier  = sessionManager.currentUser.wellnessTier
+        let icon  = sessionManager.currentUser.wellnessTierIcon
+        let progress = Double(score) / 999.0
+        let tierColor: Color = {
+            switch tier {
+            case "Beginner":   return accentGreen
+            case "Explorer":   return Color(red: 0.06, green: 0.73, blue: 0.51)
+            case "Enthusiast": return Color(red: 0.96, green: 0.6, blue: 0.2)
+            default:           return goldColor
+            }
+        }()
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Wellness Score")
+                    .font(.headline)
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: icon)
+                        .font(.caption)
+                    Text(tier)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(tierColor)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(tierColor.opacity(0.12))
+                .cornerRadius(8)
+            }
+
+            HStack(spacing: 20) {
+                // Radial progress ring
+                ZStack {
+                    Circle()
+                        .stroke(tierColor.opacity(0.15), lineWidth: 10)
+                        .frame(width: 90, height: 90)
+                    Circle()
+                        .trim(from: 0, to: progress)
+                        .stroke(
+                            AngularGradient(
+                                gradient: Gradient(colors: [tierColor.opacity(0.6), tierColor]),
+                                center: .center
+                            ),
+                            style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                        )
+                        .frame(width: 90, height: 90)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeOut(duration: 1.0), value: progress)
+                    VStack(spacing: 0) {
+                        Text("\(score)")
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text("/999")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Score breakdown
+                VStack(alignment: .leading, spacing: 8) {
+                    scoreRow(label: "Day Streak",  value: sessionManager.currentUser.streak,        multiplier: 10, color: .orange)
+                    scoreRow(label: "Tips Read",   value: sessionManager.currentUser.totalEntries,  multiplier: 5,  color: accentGreen)
+                    scoreRow(label: "Bookmarks",   value: sessionManager.currentUser.bookmarkCount, multiplier: 3,  color: .purple)
+                }
+
+                Spacer()
+            }
+
+            // Progress bar to next tier
+            let nextTierLabel = nextTier(for: tier)
+            if let nextTierLabel = nextTierLabel {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Next: \(nextTierLabel)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(tierColor.opacity(0.12))
+                                .frame(height: 6)
+                            Capsule()
+                                .fill(tierColor)
+                                .frame(width: geo.size.width * CGFloat(progress), height: 6)
+                                .animation(.easeOut(duration: 1.0), value: progress)
+                        }
+                    }
+                    .frame(height: 6)
+                }
+            }
+        }
+        .padding()
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(14)
+        .padding(.horizontal)
+    }
+
+    private func scoreRow(label: String, value: Int, multiplier: Int, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color.opacity(0.2))
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text("\(value) × \(multiplier) = \(value * multiplier)")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundColor(color)
+        }
+    }
+
+    private func nextTier(for tier: String) -> String? {
+        switch tier {
+        case "Beginner":   return "Explorer"
+        case "Explorer":   return "Enthusiast"
+        case "Enthusiast": return "Guru"
+        default: return nil
+        }
     }
 
     // MARK: - Settings

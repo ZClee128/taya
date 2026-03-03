@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		84B0F1002F9A000000000001 /* BreathingExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84B0F0FF2F9A000000000001 /* BreathingExerciseView.swift */; };
 		84C2A6E52F3F488D00EB2D03 /* StringObfuscation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E32F3F488D00EB2D03 /* StringObfuscation.swift */; };
 		84C2A6E72F4010CF00EB2D03 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */; };
 		84CAA1B32F38D5F300CCCFC1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 84CAA19D2F38D5F300CCCFC1 /* Assets.xcassets */; };
@@ -62,6 +63,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		84B0F0FF2F9A000000000001 /* BreathingExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreathingExerciseView.swift; sourceTree = "<group>"; };
 		84C2A6E32F3F488D00EB2D03 /* StringObfuscation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringObfuscation.swift; sourceTree = "<group>"; };
 		84C2A6E62F4010CF00EB2D03 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		84CAA1412F387A2E00CCCFC1 /* taya.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = taya.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -193,6 +195,7 @@
 				84CAA1A72F38D5F300CCCFC1 /* ProfileView.swift */,
 				84CAA1A82F38D5F300CCCFC1 /* SessionManager.swift */,
 				84F1A0002F67890100AB1234 /* SignInWithAppleButton.swift */,
+				84B0F0FF2F9A000000000001 /* BreathingExerciseView.swift */,
 				84CAA1A92F38D5F300CCCFC1 /* sky.jpeg */,
 				84CAA1AA2F38D5F300CCCFC1 /* sky.mp4 */,
 				84CAA1AB2F38D5F300CCCFC1 /* star.jpeg */,
@@ -374,6 +377,7 @@
 				84E8C78C2F45A8E3003B1E6D /* ShareSheet.swift in Sources */,
 				84CAA1C62F38D5F300CCCFC1 /* SessionManager.swift in Sources */,
 				84F1A0012F67890100AB1234 /* SignInWithAppleButton.swift in Sources */,
+				84B0F1002F9A000000000001 /* BreathingExerciseView.swift in Sources */,
 				84CAA1C72F38D5F300CCCFC1 /* StoreManager.swift in Sources */,
 				84CAA1C82F38D5F300CCCFC1 /* StoreView.swift in Sources */,
 				84CAA1C92F38D5F300CCCFC1 /* tayaApp.swift in Sources */,
@@ -519,7 +523,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = taya/taya.entitlements;
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 31;
+				CURRENT_PROJECT_VERSION = 32;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -562,7 +566,7 @@
 				CODE_SIGN_ENTITLEMENTS = taya/taya.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 31;
+				CURRENT_PROJECT_VERSION = 32;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
